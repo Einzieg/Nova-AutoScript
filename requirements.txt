@@ -1,0 +1,8 @@
+mmumu==0.0.2
+msc_base==0.0.1
+msc_minicap==0.0.3
+msc_mumu==0.0.2
+nicegui==2.10.1
+numpy==1.24.2
+opencv_python==4.10.0.84
+
