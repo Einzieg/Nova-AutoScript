@@ -29,9 +29,9 @@ class GuiAppSetting:
         if result:
             is_dark = self._blob_to_bool(result['dark_mode'])
             if is_dark:
-                ui.dark_mode().enable()  # 设置深色模式
+                ui.dark_mode().enable()
             else:
-                ui.dark_mode().disable()  # 设置浅色模式
+                ui.dark_mode().disable()
 
     def create_setting_tab_panel(self):
         """创建Setting标签页内容"""

@@ -20,7 +20,7 @@ root_logger.addHandler(log_file_handler)
 if __name__ == "__main__":
     # 初始化数据库
     sql_init = SQLInitialization()
-    sql_init.initialization()
+    # sql_init.initialization()
 
 if __name__ in {"__main__", "__mp_main__"}:
     application = GuiApp()

@@ -3,10 +3,9 @@ from threading import Lock
 
 from nicegui import ui, app
 
-from core.DeviceController import DeviceController
 from core.GuiAppSetting import GuiAppSetting
 from device_operation.SQLiteClient import SQLiteClient
-
+from core.LogElementHandler import LogElementHandler
 
 class GuiApp:
     def __init__(self):
@@ -31,12 +30,6 @@ class GuiApp:
     def on_close():
         logging.info('on_close')
         app.shutdown()
-
-    def log_message(self, device_name, message):
-        """添加日志并自动滚动到底部"""
-        log_area = self.device_logs[device_name]
-        log_area.value += f'\n{message}'
-        log_area.run_method('scrollTo', 0, log_area.run_method('getScrollHeight'))
 
     def _create_setting_tab_panel(self):
         """创建Setting标签页内容"""
@@ -89,7 +82,7 @@ class GuiApp:
             with ui.tab_panels(self.vertical_tabs).props('vertical').classes('w-full h-full'):
                 for tab in tabs_data:
                     with ui.tab_panel(tab['name']).classes('w-full h-full'):
-                        with ui.row().classes('w-full items-center'):
+                        with ui.row().classes('w-full h-full items-center'):
                             # 添加启动和停止按钮
                             start_btn = ui.button('启动', icon='start', on_click=lambda t=tab['name']: self.start(t)).props('color=green')
                             stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab['name']: self.stop(t)).props('color=red').classes('hidden')
@@ -103,6 +96,9 @@ class GuiApp:
                                 'start_btn': start_btn,
                                 'stop_btn': stop_btn,
                             }
+                        log = ui.log().classes('w-200 h-80')
+                        handler = LogElementHandler(log)
+                        logging.getLogger(tab['name']).addHandler(handler)
 
                 with ui.tab_panel(self.add_tab):
                     with ui.column().classes('w-full'):
@@ -110,43 +106,18 @@ class GuiApp:
                         ui.button('添加', on_click=self.add_table)
 
     def start(self, tab_name):
-        """启动标签页"""
-        if tab_name in self.tab_buttons:
-            """启动设备线程"""
-            if tab_name in self.device_threads:
-                self.device_logs[tab_name].push("设备已启动，无需重复启动")
-                return
+        """启动设备线程"""
+        buttons = self.tab_buttons[tab_name]
+        buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
+        buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
 
-            # 创建日志回调函数
-            def log_callback(message):
-                self.device_logs[tab_name].push(f"{message}\n")
-
-            # 创建并启动线程
-            device_thread = DeviceController(tab_name, log_callback)
-            self.device_threads[tab_name] = device_thread
-            device_thread.start()
-            buttons = self.tab_buttons[tab_name]
-            buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
-            buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
-        else:
-            logging.error(f"Tab '{tab_name}' not found in tab_buttons")
 
     def stop(self, tab_name):
         """停止设备线程"""
-        if tab_name in self.tab_buttons:
-            if tab_name not in self.device_threads:
-                self.device_logs[tab_name].push("设备未启动")
-                return
-            # 停止线程
-            device_thread = self.device_threads[tab_name]
-            device_thread.stop()
-            device_thread.join()  # 等待线程结束
-            del self.device_threads[tab_name]
-            buttons = self.tab_buttons[tab_name]
-            buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
-            buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
-        else:
-            logging.error(f"Tab '{tab_name}' not found in tab_buttons")
+        buttons = self.tab_buttons[tab_name]
+        buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
+        buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
+
 
     def add_table(self):
         """添加新标签页"""
@@ -184,9 +155,9 @@ class GuiApp:
     def remove_tab(self, tab_name):
         """删除标签页"""
         with ui.dialog() as dialog, ui.card():
-            with ui.column().classes('items-center'):  # 使对话框内容垂直居中
+            with ui.column().classes('items-center'):
                 ui.label(f'确定要删除 {tab_name} 吗?')
-                with ui.row().classes('justify-center'):  # 使按钮水平居中
+                with ui.row().classes('justify-center'):
                     ui.button('确定', on_click=lambda: self._confirm_remove_tab(tab_name, dialog))
                     ui.button('取消', on_click=dialog.close)
         dialog.open()
@@ -202,4 +173,4 @@ class GuiApp:
         app.on_startup(self.on_startup)
         app.on_shutdown(self.on_close)
         self.load_tabs()
-        ui.run(native=True, window_size=(1280, 720), port=9527, language='zh-CN', dark=True, reload=False)
+        ui.run(native=True, window_size=(1280, 720), language='zh-CN', reload=False)
