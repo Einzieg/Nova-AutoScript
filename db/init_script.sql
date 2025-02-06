@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS module
+(
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(255) NOT NULL,
+    text VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS config
+(
+    id        INTEGER PRIMARY KEY,
+    dark_mode blob NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO config (id, dark_mode)
+VALUES (1, 0x00);
