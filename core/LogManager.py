@@ -20,7 +20,7 @@ class LogManager:
             logger.setLevel(logging.DEBUG)  # 默认日志级别是 DEBUG
 
             # 创建日志流处理器
-            log_stream = ui.log(max_lines=1000)
+            log_stream = ui.log(max_lines=1000).classes('h-full w-full')
 
             # 创建一个自定义的日志处理器
             class UIStreamHandler(logging.Handler):

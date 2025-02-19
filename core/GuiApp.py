@@ -92,7 +92,6 @@ class GuiApp:
                 ui.button('Save', icon='save', on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
                 ui.button('Cancel', icon='cancel', on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
                 ui.button('Close', icon='close', on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
-                ui.button('Help', icon='help')
             with ui.tab_panel(two):
                 ui.label('Second tab')
             with ui.tab_panel(three):
@@ -109,8 +108,8 @@ class GuiApp:
             with ui.tab_panels(self.vertical_tabs).props('vertical').classes('w-full h-full'):
                 for tab in tabs_data:
                     with ui.tab_panel(tab['name']).classes('w-full h-full'):
-                        with ui.splitter(value=60).classes('w-full h-full') as splitter:
-                            with splitter.before:
+                        with ui.row().classes('w-full h-full'):
+                            with ui.column().classes('h-full').style('width:60%'):
                                 with ui.row().classes('w-full h-full items-center'):
                                     # 添加启动和停止按钮
                                     start_btn = ui.button('启动', icon='start', on_click=lambda t=tab['name']: self.start(t)).props('color=green')
@@ -127,9 +126,9 @@ class GuiApp:
                                     }
 
                                     self._create_configuration_tabs(tab['name'])
-                            with splitter.after:
-                                with ui.row().classes('w-full h-full'):
-                                    self._log_bind(tab['name'])
+
+                            with ui.column().classes('h-full').style('width:31vw;height:35vw;overflow-y:auto;'):
+                                self._log_bind(tab['name'])
 
                 with ui.tab_panel(self.add_tab):
                     with ui.column().classes('w-full'):
