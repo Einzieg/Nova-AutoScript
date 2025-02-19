@@ -1,15 +1,14 @@
 import logging
-from threading import Lock
 
 from nicegui import ui, app
 
 from core.GuiAppSetting import GuiAppSetting
+from core.LogManager import LogManager
 from device_operation.SQLiteClient import SQLiteClient
-from core.LogElementHandler import LogElementHandler
+
 
 class GuiApp:
     def __init__(self):
-        self.settings_lock = Lock()
         self.start_btn = None
         self.db = SQLiteClient()
         self.splitter_container = ui.column().classes('w-full')
@@ -20,6 +19,7 @@ class GuiApp:
         self.device_threads = {}  # 存储每个标签页的设备线程
         self.device_logs = {}  # 存储每个标签页的日志区域
         self.settings_page = GuiAppSetting()
+        self.log_manager = LogManager(logging.DEBUG)
 
     def on_startup(self):
         """应用启动时加载主题配置"""
@@ -51,12 +51,12 @@ class GuiApp:
     def _create_main_tabs(self):
         """创建主标签页"""
         with ui.tabs() as self.main_tabs:
-            self.start_tab = ui.tab('Start', icon='play_arrow')
-            self.setting_tab = ui.tab('Setting', icon='settings')
+            self.start_tab = ui.tab('开始', icon='play_arrow')
+            self.setting_tab = ui.tab('设置', icon='settings')
 
     def _create_main_tab_panels(self, tabs_data):
         """创建主标签页内容面板"""
-        with ui.tab_panels(self.main_tabs, value='Start').classes('w-full'):
+        with ui.tab_panels(self.main_tabs, value='开始').classes('w-full'):
             self._create_start_tab_panel(tabs_data)
             self._create_setting_tab_panel()
 
@@ -76,29 +76,60 @@ class GuiApp:
                     ui.tab(tab['name'], icon='insert_link')
                 self.add_tab = ui.tab('新增', icon='add')
 
+    def _create_configuration_tabs(self, tab_name):
+        """创建配置标签页"""
+        with ui.tabs().classes('w-full') as tabs:
+            one = ui.tab('One')
+            two = ui.tab('Two')
+            three = ui.tab('Three')
+            fore = ui.tab('Fore')
+        with ui.tab_panels(tabs, value=one).classes('w-full'):
+            with ui.tab_panel(one):
+                ui.label('First tab')
+                # 点击输出日志
+                ui.button('Edit', icon='edit', on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
+                ui.button('Delete', icon='delete_forever', on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
+                ui.button('Save', icon='save', on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
+                ui.button('Cancel', icon='cancel', on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
+                ui.button('Close', icon='close', on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
+                ui.button('Help', icon='help')
+            with ui.tab_panel(two):
+                ui.label('Second tab')
+            with ui.tab_panel(three):
+                ui.label('Third tab')
+            with ui.tab_panel(fore):
+                ui.label('Fourth tab')
+
+    def _log_bind(self, tab_name):
+        self.log_manager.get_logger(tab_name)
+
     def _create_vertical_tab_panels(self, tabs_data):
         """创建垂直标签页内容面板"""
-        with ui.column().classes('w-9/10 h-full'):
+        with ui.column().classes('h-full border').style('width:90%'):
             with ui.tab_panels(self.vertical_tabs).props('vertical').classes('w-full h-full'):
                 for tab in tabs_data:
                     with ui.tab_panel(tab['name']).classes('w-full h-full'):
-                        with ui.row().classes('w-full h-full items-center'):
-                            # 添加启动和停止按钮
-                            start_btn = ui.button('启动', icon='start', on_click=lambda t=tab['name']: self.start(t)).props('color=green')
-                            stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab['name']: self.stop(t)).props('color=red').classes('hidden')
+                        with ui.splitter(value=60).classes('w-full h-full') as splitter:
+                            with splitter.before:
+                                with ui.row().classes('w-full h-full items-center'):
+                                    # 添加启动和停止按钮
+                                    start_btn = ui.button('启动', icon='start', on_click=lambda t=tab['name']: self.start(t)).props('color=green')
+                                    stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab['name']: self.stop(t)).props('color=red').classes('hidden')
 
-                            # 使用默认参数捕获当前 tab 的值
-                            ui.button('修改', icon='edit', on_click=lambda t=tab['name']: self.update_tab(t))
-                            ui.button('删除', icon='delete_forever', on_click=lambda t=tab['name']: self.remove_tab(t))
+                                    # 使用默认参数捕获当前 tab 的值
+                                    ui.button('修改', icon='edit', on_click=lambda t=tab['name']: self.update_tab(t))
+                                    ui.button('删除', icon='delete_forever', on_click=lambda t=tab['name']: self.remove_tab(t))
 
-                            # 将按钮的引用存储到 self.tab_buttons 中
-                            self.tab_buttons[tab['name']] = {
-                                'start_btn': start_btn,
-                                'stop_btn': stop_btn,
-                            }
-                        log = ui.log().classes('w-200 h-80')
-                        handler = LogElementHandler(log)
-                        logging.getLogger(tab['name']).addHandler(handler)
+                                    # 将按钮的引用存储到 self.tab_buttons 中
+                                    self.tab_buttons[tab['name']] = {
+                                        'start_btn': start_btn,
+                                        'stop_btn': stop_btn,
+                                    }
+
+                                    self._create_configuration_tabs(tab['name'])
+                            with splitter.after:
+                                with ui.row().classes('w-full h-full'):
+                                    self._log_bind(tab['name'])
 
                 with ui.tab_panel(self.add_tab):
                     with ui.column().classes('w-full'):
@@ -112,12 +143,12 @@ class GuiApp:
         buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
 
 
+
     def stop(self, tab_name):
         """停止设备线程"""
         buttons = self.tab_buttons[tab_name]
         buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
         buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
-
 
     def add_table(self):
         """添加新标签页"""

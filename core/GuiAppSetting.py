@@ -35,7 +35,7 @@ class GuiAppSetting:
 
     def create_setting_tab_panel(self):
         """创建Setting标签页内容"""
-        with ui.tab_panel('Setting'):
+        with ui.tab_panel('设置'):
             # 主题切换按钮
             with ui.row().classes('items-center'):
                 ui.label('切换主题:').classes('text-xl')
