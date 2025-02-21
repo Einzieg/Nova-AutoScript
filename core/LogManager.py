@@ -66,3 +66,6 @@ class LogManager:
         """设置指定 tab_name 的日志级别"""
         logger = self.get_logger(tab_name)
         logger.setLevel(level)
+
+    def clear(self):
+        self.loggers = {}

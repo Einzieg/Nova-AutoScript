@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from nicegui import ui, app
 
@@ -9,15 +10,12 @@ from device_operation.SQLiteClient import SQLiteClient
 
 class GuiApp:
     def __init__(self):
-        self.start_btn = None
         self.db = SQLiteClient()
         self.splitter_container = ui.column().classes('w-full')
         self.new_tab_input = None
         self.vertical_tabs = None
         self.main_tabs = None
         self.tab_buttons = {}  # 用于存储每个标签页的按钮引用
-        self.device_threads = {}  # 存储每个标签页的设备线程
-        self.device_logs = {}  # 存储每个标签页的日志区域
         self.settings_page = GuiAppSetting()
         self.log_manager = LogManager(logging.DEBUG)
 
@@ -38,6 +36,7 @@ class GuiApp:
     def load_tabs(self):
         """从数据库加载标签页"""
         self.splitter_container.clear()
+        self.log_manager.clear()
 
         tabs_data = self.db.fetch_all("SELECT name, text FROM module")
 
