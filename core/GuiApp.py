@@ -86,11 +86,16 @@ class GuiApp:
             with ui.tab_panel(one):
                 ui.label('First tab')
                 # 点击输出日志
-                ui.button('Edit', icon='edit', on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
-                ui.button('Delete', icon='delete_forever', on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
-                ui.button('Save', icon='save', on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
-                ui.button('Cancel', icon='cancel', on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
-                ui.button('Close', icon='close', on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
+                ui.button('Edit', icon='edit',
+                          on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
+                ui.button('Delete', icon='delete_forever',
+                          on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
+                ui.button('Save', icon='save',
+                          on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
+                ui.button('Cancel', icon='cancel',
+                          on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
+                ui.button('Close', icon='close',
+                          on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
             with ui.tab_panel(two):
                 ui.label('Second tab')
             with ui.tab_panel(three):
@@ -111,8 +116,10 @@ class GuiApp:
                             with ui.column().classes('h-full').style('width:60%'):
                                 with ui.row().classes('w-full h-full items-center'):
                                     # 添加启动和停止按钮
-                                    start_btn = ui.button('启动', icon='start', on_click=lambda t=tab['name']: self.start(t)).props('color=green')
-                                    stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab['name']: self.stop(t)).props('color=red').classes('hidden')
+                                    start_btn = ui.button('启动', icon='start',
+                                                          on_click=lambda t=tab['name']: self.start(t)).props('color=green')
+                                    stop_btn = ui.button('停止', icon='stop',
+                                                         on_click=lambda t=tab['name']: self.stop(t)).props('color=red').classes('hidden')
 
                                     # 使用默认参数捕获当前 tab 的值
                                     ui.button('修改', icon='edit', on_click=lambda t=tab['name']: self.update_tab(t))
@@ -133,20 +140,6 @@ class GuiApp:
                     with ui.column().classes('w-full'):
                         self.new_tab_input = ui.input('名称', placeholder='输入名称')
                         ui.button('添加', on_click=self.add_table)
-
-    def start(self, tab_name):
-        """启动设备线程"""
-        buttons = self.tab_buttons[tab_name]
-        buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
-        buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
-
-
-
-    def stop(self, tab_name):
-        """停止设备线程"""
-        buttons = self.tab_buttons[tab_name]
-        buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
-        buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
 
     def add_table(self):
         """添加新标签页"""
@@ -197,9 +190,22 @@ class GuiApp:
         self.load_tabs()
         dialog.close()
 
+    def start(self, tab_name):
+        """启动设备线程"""
+        buttons = self.tab_buttons[tab_name]
+        buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
+        buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
+
+    def stop(self, tab_name):
+        """停止设备线程"""
+        buttons = self.tab_buttons[tab_name]
+        buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
+        buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
+
     def run(self):
         """启动应用"""
         app.on_startup(self.on_startup)
         app.on_shutdown(self.on_close)
         self.load_tabs()
-        ui.run(native=True, window_size=(1280, 720), language='zh-CN', reload=False)
+        ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='NovaAS', favicon='🔧', reload=False,
+               on_air="U20HgW7ZQZQoOyKA")
