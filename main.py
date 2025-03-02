@@ -11,11 +11,14 @@ def log_init():
     log_dir = os.path.join(os.getcwd(), 'logs')
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
+
     logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     root_logger = logging.getLogger()
-    root_logger.setLevel(root_logger.level)
+    root_logger.setLevel(logging.DEBUG)
+    file_handler = logging.FileHandler(filename=os.path.join(log_dir, f"{datetime.now().strftime('%Y-%m-%d')}.log"), mode='a', encoding='utf-8')
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
-    root_logger.addHandler(logging.FileHandler(filename=os.path.join(log_dir, f"{datetime.now().strftime('%Y-%m-%d')}.log"), mode='a', encoding='utf-8'))
+    root_logger.addHandler(file_handler)
 
 
 if __name__ == "__main__":

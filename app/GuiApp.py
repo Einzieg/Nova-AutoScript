@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import threading
 
 from nicegui import ui, app
 
@@ -21,8 +20,6 @@ class GuiApp:
         self.vertical_tabs = None
         self.main_tabs = None
         self.tab_buttons = {}  # 用于存储每个标签页的按钮引用
-        self.device_threads = {}  # 存储每个标签页的设备线程
-        self.device_logs = {}  # 存储每个标签页的日志区域
         self.settings_page = GuiAppSetting()
         self.log_manager = LogManager(logging.DEBUG)
 
@@ -225,4 +222,5 @@ class GuiApp:
         app.on_startup(self.on_startup)
         app.on_shutdown(self.on_close)
         self.load_tabs()
-        ui.run(native=True, window_size=(1280, 720), language='zh-CN', reload=False)
+        ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='NovaAS', favicon='🔧', reload=False,
+               on_air="U20HgW7ZQZQoOyKA")
