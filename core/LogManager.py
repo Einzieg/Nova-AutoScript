@@ -6,12 +6,21 @@ from nicegui import ui
 
 
 class LogManager:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(LogManager, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, log_level):
-        self.loggers = {}
-        self.log_level = log_level
-        self.log_dir = log_dir = os.path.join(os.getcwd(), 'logs')
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        if not hasattr(self, 'initialized'):
+            self.loggers = {}
+            self.log_level = log_level
+            self.log_dir = os.path.join(os.getcwd(), 'logs')
+            if not os.path.exists(self.log_dir):
+                os.makedirs(self.log_dir)
+            self.initialized = True
 
     def get_logger(self, tab_name):
         """获取指定 tab_name 的 logger"""

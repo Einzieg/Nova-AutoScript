@@ -1,6 +1,7 @@
 import logging
 import time
 
+import cv2
 from msc.minicap import MiniCap
 from msc.mumu import MuMuScreenCap, get_mumu_path
 from mtc.mumu import MuMuTouch
@@ -137,10 +138,10 @@ class DeviceUtils:
         except Exception as e:
             logging.error(f"截图时出错: {str(e)}")
             raise
+        return cv2.imread(file_name)
 
-    def click(self, coordinates):
+    def click(self, x, y):
         """使用已经初始化的点击工具进行点击操作"""
-        x, y = coordinates
         try:
             if isinstance(self.click_tool, MuMuTouch):
                 self.click_tool.click(x, y)

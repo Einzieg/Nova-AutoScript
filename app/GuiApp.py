@@ -1,14 +1,19 @@
+import asyncio
 import logging
+import threading
 
 from nicegui import ui, app
 
-from core.GuiAppSetting import GuiAppSetting
+from app.GuiAppSetting import GuiAppSetting
 from core.LogManager import LogManager
+from core.MainProcess import MainProcess
 from device_operation.SQLiteClient import SQLiteClient
 
 
 class GuiApp:
     def __init__(self):
+        self.target_thread = {}
+        self.target_running = {}
         self.start_btn = None
         self.db = SQLiteClient()
         self.splitter_container = ui.column().classes('w-full')
@@ -136,18 +141,35 @@ class GuiApp:
                         ui.button('添加', on_click=self.add_table)
 
     def start(self, tab_name):
-        """启动设备线程"""
         buttons = self.tab_buttons[tab_name]
         buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
         buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
 
+        # 创建异步任务
+        process = MainProcess(tab_name)
+        self.target_running[tab_name] = True
+        self.target_thread[tab_name] = asyncio.create_task(self.run_script(process))
 
+    async def run_script(self, process):
+        """运行 MainProcess 的异步任务"""
+        try:
+            await process.run()
+        except asyncio.CancelledError:
+            # 处理任务取消的情况
+            print(f"Task for {process.target} was cancelled.")
+        finally:
+            self.target_running[process.target] = False
 
     def stop(self, tab_name):
-        """停止设备线程"""
         buttons = self.tab_buttons[tab_name]
         buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
         buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
+
+        # 取消对应的异步任务
+        if tab_name in self.target_thread:
+            self.target_thread[tab_name].cancel()  # 取消任务
+            del self.target_thread[tab_name]
+
 
     def add_table(self):
         """添加新标签页"""

@@ -2,7 +2,7 @@ import logging
 import os
 import subprocess
 from datetime import datetime
-from core.GuiApp import GuiApp
+from app.GuiApp import GuiApp
 from device_operation.SQLInitialization import SQLInitialization
 from path_util import resource_path
 
