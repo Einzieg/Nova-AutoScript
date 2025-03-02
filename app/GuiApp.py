@@ -11,6 +11,7 @@ from device_operation.SQLiteClient import SQLiteClient
 
 class GuiApp:
     def __init__(self):
+        self.processes = {}
         self.target_thread = {}
         self.target_running = {}
         self.start_btn = None
@@ -116,15 +117,21 @@ class GuiApp:
                                     # 添加启动和停止按钮
                                     start_btn = ui.button('启动', icon='start', on_click=lambda t=tab['name']: self.start(t)).props('color=green')
                                     stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab['name']: self.stop(t)).props('color=red').classes('hidden')
+                                    pause_btn = ui.button('暂停', icon='pause', on_click=lambda t=tab['name']: self.pause(t)).props('color=orange').classes('hidden')
+                                    restore_btn = ui.button('恢复', icon='restore', on_click=lambda t=tab['name']: self.restore(t)).props('color=green').classes('hidden')
 
                                     # 使用默认参数捕获当前 tab 的值
-                                    ui.button('修改', icon='edit', on_click=lambda t=tab['name']: self.update_tab(t))
-                                    ui.button('删除', icon='delete_forever', on_click=lambda t=tab['name']: self.remove_tab(t))
+                                    edit_btn = ui.button('修改', icon='edit', on_click=lambda t=tab['name']: self.update_tab(t))
+                                    del_btn = ui.button('删除', icon='delete_forever', on_click=lambda t=tab['name']: self.remove_tab(t))
 
                                     # 将按钮的引用存储到 self.tab_buttons 中
                                     self.tab_buttons[tab['name']] = {
                                         'start_btn': start_btn,
                                         'stop_btn': stop_btn,
+                                        'pause_btn': pause_btn,
+                                        'restore_btn': restore_btn,
+                                        'edit_btn': edit_btn,
+                                        'del_btn': del_btn,
                                     }
 
                                     self._create_configuration_tabs(tab['name'])
@@ -140,12 +147,34 @@ class GuiApp:
     def start(self, tab_name):
         buttons = self.tab_buttons[tab_name]
         buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
+        buttons['edit_btn'].classes(add='hidden')
+        buttons['del_btn'].classes(add='hidden')
         buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
+        buttons['pause_btn'].classes(remove='hidden')
 
-        # 创建异步任务
+        # 创建 MainProcess 实例并存储
         process = MainProcess(tab_name)
         self.target_running[tab_name] = True
         self.target_thread[tab_name] = asyncio.create_task(self.run_script(process))
+
+        # 保存 MainProcess 实例
+        if not hasattr(self, 'processes'):
+            self.processes = {}
+        self.processes[tab_name] = process
+
+    def stop(self, tab_name):
+        buttons = self.tab_buttons[tab_name]
+        buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
+        buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
+        buttons['edit_btn'].classes(remove='hidden')
+        buttons['del_btn'].classes(remove='hidden')
+        buttons['pause_btn'].classes(add='hidden')
+        buttons['restore_btn'].classes(add='hidden')
+
+        # 取消对应的异步任务
+        if tab_name in self.target_thread:
+            self.target_thread[tab_name].cancel()  # 取消任务
+            del self.target_thread[tab_name]
 
     async def run_script(self, process):
         """运行 MainProcess 的异步任务"""
@@ -157,16 +186,25 @@ class GuiApp:
         finally:
             self.target_running[process.target] = False
 
-    def stop(self, tab_name):
+    def pause(self, tab_name):
+        """暂停"""
         buttons = self.tab_buttons[tab_name]
-        buttons['stop_btn'].classes(add='hidden')  # 隐藏停止按钮
-        buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
+        buttons['pause_btn'].classes(add='hidden')
+        buttons['restore_btn'].classes(remove='hidden')
 
-        # 取消对应的异步任务
-        if tab_name in self.target_thread:
-            self.target_thread[tab_name].cancel()  # 取消任务
-            del self.target_thread[tab_name]
+        if tab_name in self.processes:
+            process = self.processes[tab_name]  # 获取 MainProcess 实例
+            process.paused = True  # 设置暂停标志
 
+    def restore(self, tab_name):
+        """恢复"""
+        buttons = self.tab_buttons[tab_name]
+        buttons['restore_btn'].classes(add='hidden')
+        buttons['pause_btn'].classes(remove='hidden')
+
+        if tab_name in self.processes:
+            process = self.processes[tab_name]  # 获取 MainProcess 实例
+            process.paused = False  # 取消暂停标志
 
     def add_table(self):
         """添加新标签页"""
@@ -222,5 +260,4 @@ class GuiApp:
         app.on_startup(self.on_startup)
         app.on_shutdown(self.on_close)
         self.load_tabs()
-        ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='NovaAS', favicon='🔧', reload=False,
-               on_air="U20HgW7ZQZQoOyKA")
+        ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='open', favicon='🔧', reload=False)
