@@ -43,7 +43,7 @@ class GuiApp:
         self.splitter_container.clear()
         self.log_manager.clear()
 
-        tabs_data = self.db.fetch_all("SELECT name, text FROM module")
+        tabs_data = self.db.fetch_all("SELECT name FROM module")
 
         with self.splitter_container:
             self._create_main_tabs()
@@ -90,17 +90,17 @@ class GuiApp:
 
         with ui.tab_panels(tabs, value=basic).classes('w-full'):
             with ui.tab_panel(basic):
-                ui.input(label='模拟器编号/端口',
-                         validation={'输入非法': lambda value: value.isdigit()},
-                         on_change=lambda e: self.db.execute_update('UPDATE module SET text = ? WHERE name = ?', (e.value, tab_name)),
-                         value=str(self.db.fetch_one('SELECT text FROM module WHERE name = ?', (tab_name,)).get('text')),
-                         )
+                ui.number(label='模拟器编号/端口',
+                          precision=-1,
+                          on_change=lambda e: self.db.execute_update('UPDATE module SET port = ? WHERE name = ?', (e.value, tab_name)),
+                          value=self.db.fetch_one('SELECT port FROM module WHERE name = ?', (tab_name,)).get('port'),
+                          )
                 # 点击输出日志
-                ui.button('Edit', icon='edit',on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
-                ui.button('Delete', icon='delete_forever',on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
-                ui.button('Save', icon='save',on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
-                ui.button('Cancel', icon='cancel',on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
-                ui.button('Close', icon='close',on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
+                ui.button('Edit', icon='edit', on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
+                ui.button('Delete', icon='delete_forever', on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
+                ui.button('Save', icon='save', on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
+                ui.button('Cancel', icon='cancel', on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
+                ui.button('Close', icon='close', on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
             with ui.tab_panel(two):
                 ui.label('Second tab')
             with ui.tab_panel(three):
@@ -219,7 +219,7 @@ class GuiApp:
             if self.db.fetch_one("SELECT name FROM module WHERE name = ?", (new_tab_name,)):
                 ui.notify('该名称已存在', color='red')
                 return
-            self.db.insert_data("module", ["name", "text"], [new_tab_name, "新标签页内容"])
+            self.db.insert_data("module", ["name"], [new_tab_name])
             self.new_tab_input.value = ''
             self.load_tabs()
             self.vertical_tabs.value = new_tab_name
