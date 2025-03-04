@@ -41,6 +41,7 @@ class GuiApp:
     def load_tabs(self):
         """从数据库加载标签页"""
         self.splitter_container.clear()
+        self.log_manager.clear()
 
         tabs_data = self.db.fetch_all("SELECT name, text FROM module")
 
@@ -82,19 +83,24 @@ class GuiApp:
     def _create_configuration_tabs(self, tab_name):
         """创建配置标签页"""
         with ui.tabs().classes('w-full') as tabs:
-            one = ui.tab('One')
-            two = ui.tab('Two')
-            three = ui.tab('Three')
-            fore = ui.tab('Fore')
-        with ui.tab_panels(tabs, value=one).classes('w-full'):
-            with ui.tab_panel(one):
-                ui.label('First tab')
+            basic = ui.tab('基础')
+            two = ui.tab('日常')
+            three = ui.tab('刷怪')
+            fore = ui.tab('残骸')
+
+        with ui.tab_panels(tabs, value=basic).classes('w-full'):
+            with ui.tab_panel(basic):
+                ui.input(label='模拟器编号/端口',
+                         validation={'输入非法': lambda value: value.isdigit()},
+                         on_change=lambda e: self.db.execute_update('UPDATE module SET text = ? WHERE name = ?', (e.value, tab_name)),
+                         value=str(self.db.fetch_one('SELECT text FROM module WHERE name = ?', (tab_name,)).get('text')),
+                         )
                 # 点击输出日志
-                ui.button('Edit', icon='edit', on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
-                ui.button('Delete', icon='delete_forever', on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
-                ui.button('Save', icon='save', on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
-                ui.button('Cancel', icon='cancel', on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
-                ui.button('Close', icon='close', on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
+                ui.button('Edit', icon='edit',on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
+                ui.button('Delete', icon='delete_forever',on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
+                ui.button('Save', icon='save',on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
+                ui.button('Cancel', icon='cancel',on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
+                ui.button('Close', icon='close',on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
             with ui.tab_panel(two):
                 ui.label('Second tab')
             with ui.tab_panel(three):
@@ -224,7 +230,8 @@ class GuiApp:
             with ui.column().classes('items-center'):
                 update_tab_input = ui.input('名称', placeholder='输入名称', value=tab_name)  # 默认显示当前名称
                 with ui.row().classes('justify-center'):  # 使按钮水平居中
-                    ui.button('确定', on_click=lambda: self._confirm_update_tab(tab_name, update_tab_input.value, dialog))
+                    ui.button('确定',
+                              on_click=lambda: self._confirm_update_tab(tab_name, update_tab_input.value, dialog))
                     ui.button('取消', on_click=dialog.close)
         dialog.open()  # 手动打开对话框
 

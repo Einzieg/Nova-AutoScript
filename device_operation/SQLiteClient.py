@@ -107,3 +107,7 @@ class SQLiteClient:
         """
         results = self.execute_query(query, params)
         return results[0] if results else None
+
+# if __name__ == "__main__":
+#     with SQLiteClient() as db:
+#         print(db.fetch_one('SELECT text FROM module WHERE name = "deepseekq"',).get('text'))
