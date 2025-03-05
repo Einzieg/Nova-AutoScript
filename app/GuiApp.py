@@ -91,7 +91,7 @@ class GuiApp:
         with ui.tab_panels(tabs, value=basic).classes('w-full'):
             with ui.tab_panel(basic):
                 ui.number(label='模拟器编号/端口',
-                          precision=-1,
+                          precision=0,
                           on_change=lambda e: self.db.execute_update('UPDATE module SET port = ? WHERE name = ?', (e.value, tab_name)),
                           value=self.db.fetch_one('SELECT port FROM module WHERE name = ?', (tab_name,)).get('port'),
                           )
