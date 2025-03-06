@@ -1,4 +1,5 @@
 from nicegui import ui, app
+from nicegui.html import embed
 
 from device_operation.SQLiteClient import SQLiteClient
 
@@ -35,12 +36,20 @@ class GuiAppSetting:
 
     def create_setting_tab_panel(self):
         """创建Setting标签页内容"""
-        with ui.tab_panel('设置'):
+        with ((ui.tab_panel('设置'))):
             # 主题切换按钮
             with ui.row().classes('items-center'):
                 ui.label('切换主题:').classes('text-xl')
                 ui.button('深色模式', icon='dark_mode', on_click=lambda: self.change_theme(True)).props('color=dark text-color=white')
-                ui.button('浅色模式', icon='light_mode',  on_click=lambda: self.change_theme(False)).props('color=white text-color=black')
+                ui.button('浅色模式', icon='light_mode', on_click=lambda: self.change_theme(False)).props('color=white text-color=black')
+            with ui.row().classes('items-center'):
+                ui.label('邮件配置:').classes('text-xl')
+                conf = self.db.fetch_one("SELECT email, password, receiver FROM config WHERE id = 1")
+                email = ui.input('邮箱地址', placeholder='请输入邮箱地址', value=conf.get('email'))
+                password = ui.input('邮箱密码/授权码', placeholder='请输入邮箱密码', value=conf.get('password'))
+                receiver = ui.input('收件人邮箱', placeholder='请输入收件人邮箱', value=conf.get('receiver'))
+                ui.button('保存', on_click=lambda: self.db.execute_update("UPDATE config SET email = ?, password = ?, receiver = ? WHERE id = 1", (email.value, password.value, receiver.value))
+                          ).props('color=primary')
 
             ui.button('关闭', on_click=self.on_close)
 

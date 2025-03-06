@@ -30,7 +30,7 @@ class DeviceUtils:
         self.adb = AdbClient(ip=self.ip, port=self.port)
 
         # 初始化截图工具
-        self.screencap = self._initialize_screencap()
+        self.screencap_tool = self._initialize_screencap()
 
         # 初始化点击工具
         self.click_tool = self._initialize_click_tool()
@@ -125,23 +125,24 @@ class DeviceUtils:
         """
         start_time = time.time()
         try:
-            if isinstance(self.screencap, MuMuScreenCap):
-                self.screencap.save_screencap(file_name)
+            if isinstance(self.screencap_tool, MuMuScreenCap):
+                self.screencap_tool.save_screencap(file_name)
                 logging.debug(f"使用MuMu屏幕截图，保存为 {file_name} ,耗时 {time.time() - start_time:.2f}s")
-            elif isinstance(self.screencap, MiniCap):
-                self.screencap.save_screencap(file_name)
+            elif isinstance(self.screencap_tool, MiniCap):
+                self.screencap_tool.save_screencap(file_name)
                 logging.debug(f"使用Minicap屏幕截图，保存为 {file_name} ,耗时 {time.time() - start_time:.2f}s")
             else:
-                self.screencap.shell(f"screencap -p /sdcard/{file_name}")
-                self.screencap.pull(f"/sdcard/{file_name}", file_name)
+                self.screencap_tool.shell(f"screencap -p /sdcard/{file_name}")
+                self.screencap_tool.pull(f"/sdcard/{file_name}", file_name)
                 logging.debug(f"使用ADB屏幕截图，保存为 {file_name} ,耗时 {time.time() - start_time:.2f}s")
         except Exception as e:
             logging.error(f"截图时出错: {str(e)}")
             raise
         return cv2.imread(file_name)
 
-    def click(self, x, y):
+    def click(self, coordinate):
         """使用已经初始化的点击工具进行点击操作"""
+        x, y = coordinate
         try:
             if isinstance(self.click_tool, MuMuTouch):
                 self.click_tool.click(x, y)

@@ -42,12 +42,11 @@ class ControlTools:
             icon_center_y = max_loc[1] + icon_h // 2
             random_offset_x = random.randint(-self.offset, self.offset)
             random_offset_y = random.randint(-self.offset, self.offset)
-            screen_x = icon_center_x + random_offset_x
-            screen_y = icon_center_y + random_offset_y
-            logging.debug(f"匹配成功，坐标 [{screen_x}, {screen_y}]")
+            coordinate = icon_center_x + random_offset_x , icon_center_y + random_offset_y
+            logging.debug(f"匹配成功，坐标 [{coordinate}]")
             if click:
-                self.device.click(screen_x, screen_y)
-            return screen_x, screen_y
+                self.device.click(coordinate)
+            return coordinate
         return None
 
     def wait_element_appear(self, template, time_out=60):

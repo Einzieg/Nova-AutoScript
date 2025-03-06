@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from os import remove
 
 from nicegui import ui, app
 
@@ -44,6 +45,10 @@ class GuiApp:
         self.log_manager.clear()
 
         tabs_data = self.db.fetch_all("SELECT name FROM module")
+
+        for tab in tabs_data:
+            if tab['name'] not in self.target_thread:
+                self.target_running[tab['name']] = False
 
         with self.splitter_container:
             self._create_main_tabs()
@@ -140,6 +145,13 @@ class GuiApp:
                                         'del_btn': del_btn,
                                     }
 
+                                    if self.target_running[tab['name']]:
+                                        start_btn.classes(add='hidden')
+                                        stop_btn.classes(remove='hidden')
+                                        pause_btn.classes(remove='hidden')
+                                        edit_btn.classes(add='hidden')
+                                        del_btn.classes(add='hidden')
+
                                     self._create_configuration_tabs(tab['name'])
 
                             with ui.column().classes('h-full').style('width:31vw;height:35vw;overflow-y:auto;'):
@@ -176,6 +188,8 @@ class GuiApp:
         buttons['del_btn'].classes(remove='hidden')
         buttons['pause_btn'].classes(add='hidden')
         buttons['restore_btn'].classes(add='hidden')
+
+        self.target_running[tab_name] = False
 
         # 取消对应的异步任务
         if tab_name in self.target_thread:
