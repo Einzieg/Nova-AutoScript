@@ -46,7 +46,7 @@ class GuiAppSetting:
                 ui.label('邮件配置:').classes('text-xl')
                 conf = self.db.fetch_one("SELECT email, password, receiver FROM config WHERE id = 1")
                 email = ui.input('邮箱地址', placeholder='请输入邮箱地址', value=conf.get('email'))
-                password = ui.input('邮箱密码/授权码', placeholder='请输入邮箱密码', value=conf.get('password'))
+                password = ui.input('邮箱密码/授权码', placeholder='请输入邮箱密码', password=True, value=conf.get('password'))
                 receiver = ui.input('收件人邮箱', placeholder='请输入收件人邮箱', value=conf.get('receiver'))
                 ui.button('保存', on_click=lambda: self.db.execute_update("UPDATE config SET email = ?, password = ?, receiver = ? WHERE id = 1", (email.value, password.value, receiver.value))
                           ).props('color=primary')
