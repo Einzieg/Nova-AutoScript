@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import random
 import time
@@ -49,21 +50,21 @@ class ControlTools:
             return coordinate
         return None
 
-    def wait_element_appear(self, template, time_out=60):
+    async def wait_element_appear(self, template, time_out=60):
         times = 0
         while times < time_out:
             if self.matching(template, click=False):
                 return True
-            time.sleep(1)
+            await asyncio.sleep(1)
             times += 1
         return False
 
-    def wait_element_disappear(self, template, time_out=60):
+    async def wait_element_disappear(self, template, time_out=60):
         times = 0
         while times < time_out:
             if not self.matching(template, click=False):
                 return True
-            time.sleep(1)
+            await asyncio.sleep(1)
             times += 1
         return False
 

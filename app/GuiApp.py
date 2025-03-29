@@ -1,6 +1,6 @@
 import asyncio
+import json
 import logging
-from os import remove
 
 from nicegui import ui, app
 
@@ -88,10 +88,11 @@ class GuiApp:
     def _create_configuration_tabs(self, tab_name):
         """创建配置标签页"""
         with ui.tabs().classes('w-full') as tabs:
-            basic = ui.tab('基础')
-            two = ui.tab('日常')
-            three = ui.tab('刷怪')
-            fore = ui.tab('残骸')
+            basic = ui.tab('基础配置')
+            daily = ui.tab('日常任务')
+            permanent = ui.tab('常驻任务')
+            events = ui.tab('活动任务')
+            outer = ui.tab('其他任务')
 
         with ui.tab_panels(tabs, value=basic).classes('w-full'):
             with ui.tab_panel(basic):
@@ -100,18 +101,42 @@ class GuiApp:
                           on_change=lambda e: self.db.execute_update('UPDATE module SET port = ? WHERE name = ?', (e.value, tab_name)),
                           value=self.db.fetch_one('SELECT port FROM module WHERE name = ?', (tab_name,)).get('port'),
                           )
-                # 点击输出日志
-                ui.button('Edit', icon='edit', on_click=lambda t=tab_name: self.log_manager.log(f'info.log', t, logging.INFO))
-                ui.button('Delete', icon='delete_forever', on_click=lambda t=tab_name: self.log_manager.log(f'debug.log', t, logging.DEBUG))
-                ui.button('Save', icon='save', on_click=lambda t=tab_name: self.log_manager.log(f'warning.log', t, logging.WARNING))
-                ui.button('Cancel', icon='cancel', on_click=lambda t=tab_name: self.log_manager.log(f'error.log', t, logging.ERROR))
-                ui.button('Close', icon='close', on_click=lambda t=tab_name: self.log_manager.log(f'critical.log', t, logging.CRITICAL))
-            with ui.tab_panel(two):
+                ui.select(label='出击舰队',
+                          options={'all': '全选', 'fleet1': '舰队1', 'fleet2': '舰队2', 'fleet3': '3舰队', 'fleet4': '舰队4', 'fleet5': '舰队5', 'fleet6': '舰队6'},
+                          on_change=lambda e: self.db.execute_update('UPDATE module SET attack_fleet = ? WHERE name = ?', (json.dumps(e.value, skipkeys=True), tab_name)),
+                          value=json.loads(self.db.fetch_one('SELECT attack_fleet FROM module WHERE name = ?', (tab_name,)).get('attack_fleet')),
+                          multiple=True).classes('w-64').props('use-chips')
+                ui.select(
+                    label='执行任务',
+                    options=['日常任务', '常驻任务', '活动任务', '其他任务'],
+                    multiple=True,
+                ).classes('w-64').props('use-chips')
+
+                with ui.input(label='常驻任务停止时间',
+                              placeholder='默认不停止',
+                              on_change=lambda e: self.db.execute_update('UPDATE module SET stop_time = ? WHERE name = ?', (e.value, tab_name)),
+                              value=self.db.fetch_one('SELECT stop_time FROM module WHERE name = ?', (tab_name,)).get('stop_time'),
+                              ) as time:
+                    with ui.menu().props('no-parent-event') as menu:
+                        with ui.time().props('landscape').bind_value(time):
+                            with ui.row().classes('justify-end'):
+                                ui.button('Close', on_click=menu.close).props('flat')
+                    with time.add_slot('append'):
+                        ui.icon('access_time').on('click', menu.open).classes('cursor-pointer')
+            with ui.tab_panel(daily):
                 ui.label('Second tab')
-            with ui.tab_panel(three):
+            with ui.tab_panel(permanent):
                 ui.label('Third tab')
-            with ui.tab_panel(fore):
+            with ui.tab_panel(events):
                 ui.label('Fourth tab')
+            with ui.tab_panel(outer):
+                with ui.row().classes('w-full h-full items-center'):
+                    ui.select(label='刷隐秘策略',
+                              options=['刷完当前能量', '刷完能量棒', '使用GEC'],
+                              ).classes('w-48')
+                    ui.number(label='刷隐秘次数',
+                              placeholder='默认不限制次数',
+                              ).classes('w-48')
 
     def _log_bind(self, tab_name):
         self.log_manager.get_logger(tab_name)
@@ -168,10 +193,10 @@ class GuiApp:
         buttons['edit_btn'].classes(add='hidden')
         buttons['del_btn'].classes(add='hidden')
         buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
-        buttons['pause_btn'].classes(remove='hidden')
+        # buttons['pause_btn'].classes(remove='hidden')
 
         # 创建 MainProcess 实例并存储
-        process = MainProcess(tab_name)
+        process = MainProcess(self, tab_name)
         self.target_running[tab_name] = True
         self.target_thread[tab_name] = asyncio.create_task(self.run_script(process))
 
@@ -186,8 +211,8 @@ class GuiApp:
         buttons['start_btn'].classes(remove='hidden')  # 显示启动按钮
         buttons['edit_btn'].classes(remove='hidden')
         buttons['del_btn'].classes(remove='hidden')
-        buttons['pause_btn'].classes(add='hidden')
-        buttons['restore_btn'].classes(add='hidden')
+        # buttons['pause_btn'].classes(add='hidden')
+        # buttons['restore_btn'].classes(add='hidden')
 
         self.target_running[tab_name] = False
 

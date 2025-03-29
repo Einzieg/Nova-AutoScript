@@ -31,7 +31,7 @@ if __name__ == "__main__":
     os.environ["PATH"] = adb_path + os.pathsep + os.environ["PATH"]
     try:
         subprocess.run(["adb", "version"], check=True)
-        logging.info("ADB 环境设置成功")
+        logging.info(f"ADB 环境设置成功 {adb_path}")
     except subprocess.CalledProcessError as e:
         logging.error(f"ADB 环境变量设置失败: {e}")
 
