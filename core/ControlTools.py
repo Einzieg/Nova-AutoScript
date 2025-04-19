@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import random
-import time
 
 import cv2
+
+from core.LogManager import LogManager
+from models.Template import Template
 
 
 class ControlTools:
@@ -12,6 +14,7 @@ class ControlTools:
         self.device = device
         self.offset = 3
         self.confidence = 0.8
+        self.logging = LogManager()
 
         self.forbidden_zones = [
             (0, 0, 500, 260),  # 左上角人物
@@ -24,47 +27,56 @@ class ControlTools:
             (1680, 250, 1920, 750)  # 右侧活动及快捷菜单
         ]
 
-    def matching(self, template, click=False, forbidden=False):
-        image = self.device.screencap(self.target)
+    async def matching(self, template: Template, click=False, sleep=0):
+        image = self.device.get_screencap()
+        template = template.cv_tmp
 
-        if forbidden:
+        if template.forbidden:
             for zone in self.forbidden_zones:
                 left, top, right, bottom = zone
                 width = right - left
                 height = bottom - top
                 image[top:top + height, left:left + width] = 0
+        try:
+            result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
 
-        result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+            if max_val >= template.threshold:
+                icon_w, icon_h = template.shape[1], template.shape[0]
+                icon_center_x = max_loc[0] + icon_w // 2
+                icon_center_y = max_loc[1] + icon_h // 2
+                random_offset_x = random.randint(-self.offset, self.offset)
+                random_offset_y = random.randint(-self.offset, self.offset)
+                coordinate = icon_center_x + random_offset_x, icon_center_y + random_offset_y
+                self.logging.log(f"{template.name} 匹配成功，坐标 [{coordinate}]", self.target)
+                if click:
+                    self.device.click(coordinate)
+                return coordinate
+            else:
+                self.logging.log(f"{template.name} 未匹配，置信度 {max_val}", self.target, logging.DEBUG)
+                return None
+        except Exception as e:
+            self.logging.log(f"{template.name} 匹配失败: {e}", self.target, logging.ERROR)
+            return None
+        finally:
+            if sleep > 0:
+                await asyncio.sleep(sleep)
 
-        if max_val >= self.confidence:
-            icon_w, icon_h = template.shape[1], template.shape[0]
-            icon_center_x = max_loc[0] + icon_w // 2
-            icon_center_y = max_loc[1] + icon_h // 2
-            random_offset_x = random.randint(-self.offset, self.offset)
-            random_offset_y = random.randint(-self.offset, self.offset)
-            coordinate = icon_center_x + random_offset_x , icon_center_y + random_offset_y
-            logging.debug(f"匹配成功，坐标 [{coordinate}]")
-            if click:
-                self.device.click(coordinate)
-            return coordinate
-        return None
-
-    async def wait_element_appear(self, template, time_out=60):
+    async def wait_element_appear(self, template: Template, click=False, time_out=60):
         times = 0
         while times < time_out:
-            if self.matching(template, click=False):
+            coordinate = await self.matching(template, click=False, sleep=1)
+            if coordinate:
+                if click:
+                    self.device.click(coordinate)
                 return True
-            await asyncio.sleep(1)
             times += 1
         return False
 
-    async def wait_element_disappear(self, template, time_out=60):
+    async def wait_element_disappear(self, template: Template, time_out=60):
         times = 0
         while times < time_out:
-            if not self.matching(template, click=False):
+            if not await self.matching(template, click=False, sleep=1):
                 return True
-            await asyncio.sleep(1)
             times += 1
         return False
-

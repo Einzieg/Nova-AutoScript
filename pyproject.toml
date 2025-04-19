@@ -1,0 +1,21 @@
+[project]
+name = "novaah"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy==2.2.4",
+    "nicegui==2.13.0",
+    "opencv_python==4.11.0.86",
+    "pywebview==5.4",
+    "peewee==3.17.9",
+    "rapidocr_onnxruntime==1.4.4",
+    "rapidocr==2.0.6",
+    "mtc",
+    "msc",
+]
+
+[tool.uv.sources]
+mtc = { git = "https://github.com/NakanoSanku/mtc" }
+msc = { git = "https://github.com/NakanoSanku/msc" }

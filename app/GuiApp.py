@@ -1,13 +1,13 @@
 import asyncio
-import json
 import logging
 
 from nicegui import ui, app
 
+from app.GuiAppConfigurationTabs import GuiAppConfigurationTabs
 from app.GuiAppSetting import GuiAppSetting
 from core.LogManager import LogManager
 from core.MainProcess import MainProcess
-from device_operation.SQLiteClient import SQLiteClient
+from models.Module import Module
 
 
 class GuiApp:
@@ -16,14 +16,14 @@ class GuiApp:
         self.target_thread = {}
         self.target_running = {}
         self.start_btn = None
-        self.db = SQLiteClient()
         self.splitter_container = ui.column().classes('w-full')
         self.new_tab_input = None
         self.vertical_tabs = None
         self.main_tabs = None
         self.tab_buttons = {}  # 用于存储每个标签页的按钮引用
         self.settings_page = GuiAppSetting()
-        self.log_manager = LogManager(logging.DEBUG)
+        self.configuration_tabs = GuiAppConfigurationTabs()
+        self.log_manager = LogManager()
 
     def on_startup(self):
         """应用启动时加载主题配置"""
@@ -44,18 +44,18 @@ class GuiApp:
         self.splitter_container.clear()
         self.log_manager.clear()
 
-        tabs_data = self.db.fetch_all("SELECT name FROM module")
+        tabs_data = Module.select()
 
         for tab in tabs_data:
-            if tab['name'] not in self.target_thread:
-                self.target_running[tab['name']] = False
+            if tab.name not in self.target_thread:
+                self.target_running[tab.name] = False
 
         with self.splitter_container:
             self._create_main_tabs()
             self._create_main_tab_panels(tabs_data)
 
         if tabs_data:
-            self.vertical_tabs.value = tabs_data[0]['name']
+            self.vertical_tabs.value = tabs_data[0].name
 
     def _create_main_tabs(self):
         """创建主标签页"""
@@ -82,86 +82,34 @@ class GuiApp:
             self.vertical_tabs = ui.tabs().props('vertical').classes('w-full h-full')
             with self.vertical_tabs:
                 for tab in tabs_data:
-                    ui.tab(tab['name'], icon='insert_link')
+                    ui.tab(tab.name, icon='insert_link')
                 self.add_tab = ui.tab('新增', icon='add')
 
     def _create_configuration_tabs(self, tab_name):
         """创建配置标签页"""
-        with ui.tabs().classes('w-full') as tabs:
-            basic = ui.tab('基础配置')
-            daily = ui.tab('日常任务')
-            permanent = ui.tab('常驻任务')
-            events = ui.tab('活动任务')
-            outer = ui.tab('其他任务')
-
-        with ui.tab_panels(tabs, value=basic).classes('w-full'):
-            with ui.tab_panel(basic):
-                ui.number(label='模拟器编号/端口',
-                          precision=0,
-                          on_change=lambda e: self.db.execute_update('UPDATE module SET port = ? WHERE name = ?', (e.value, tab_name)),
-                          value=self.db.fetch_one('SELECT port FROM module WHERE name = ?', (tab_name,)).get('port'),
-                          )
-                ui.select(label='出击舰队',
-                          options={'all': '全选', 'fleet1': '舰队1', 'fleet2': '舰队2', 'fleet3': '3舰队', 'fleet4': '舰队4', 'fleet5': '舰队5', 'fleet6': '舰队6'},
-                          on_change=lambda e: self.db.execute_update('UPDATE module SET attack_fleet = ? WHERE name = ?', (json.dumps(e.value, skipkeys=True), tab_name)),
-                          value=json.loads(self.db.fetch_one('SELECT attack_fleet FROM module WHERE name = ?', (tab_name,)).get('attack_fleet')),
-                          multiple=True).classes('w-64').props('use-chips')
-                ui.select(
-                    label='执行任务',
-                    options=['日常任务', '常驻任务', '活动任务', '其他任务'],
-                    multiple=True,
-                ).classes('w-64').props('use-chips')
-
-                with ui.input(label='常驻任务停止时间',
-                              placeholder='默认不停止',
-                              on_change=lambda e: self.db.execute_update('UPDATE module SET stop_time = ? WHERE name = ?', (e.value, tab_name)),
-                              value=self.db.fetch_one('SELECT stop_time FROM module WHERE name = ?', (tab_name,)).get('stop_time'),
-                              ) as time:
-                    with ui.menu().props('no-parent-event') as menu:
-                        with ui.time().props('landscape').bind_value(time):
-                            with ui.row().classes('justify-end'):
-                                ui.button('Close', on_click=menu.close).props('flat')
-                    with time.add_slot('append'):
-                        ui.icon('access_time').on('click', menu.open).classes('cursor-pointer')
-            with ui.tab_panel(daily):
-                ui.label('Second tab')
-            with ui.tab_panel(permanent):
-                ui.label('Third tab')
-            with ui.tab_panel(events):
-                ui.label('Fourth tab')
-            with ui.tab_panel(outer):
-                with ui.row().classes('w-full h-full items-center'):
-                    ui.select(label='刷隐秘策略',
-                              options=['刷完当前能量', '刷完能量棒', '使用GEC'],
-                              ).classes('w-48')
-                    ui.number(label='刷隐秘次数',
-                              placeholder='默认不限制次数',
-                              ).classes('w-48')
-
-    def _log_bind(self, tab_name):
-        self.log_manager.get_logger(tab_name)
+        self.configuration_tabs.create_configuration_tabs(tab_name)
 
     def _create_vertical_tab_panels(self, tabs_data):
         """创建垂直标签页内容面板"""
         with ui.column().classes('h-full border').style('width:90%'):
             with ui.tab_panels(self.vertical_tabs).props('vertical').classes('w-full h-full'):
                 for tab in tabs_data:
-                    with ui.tab_panel(tab['name']).classes('w-full h-full'):
+                    with ui.tab_panel(tab.name).classes('w-full h-full'):
                         with ui.row().classes('w-full h-full'):
                             with ui.column().classes('h-full').style('width:60%'):
                                 with ui.row().classes('w-full h-full items-center'):
                                     # 添加启动和停止按钮
-                                    start_btn = ui.button('启动', icon='start', on_click=lambda t=tab['name']: self.start(t)).props('color=green')
-                                    stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab['name']: self.stop(t)).props('color=red').classes('hidden')
-                                    pause_btn = ui.button('暂停', icon='pause', on_click=lambda t=tab['name']: self.pause(t)).props('color=orange').classes('hidden')
-                                    restore_btn = ui.button('恢复', icon='restore', on_click=lambda t=tab['name']: self.restore(t)).props('color=green').classes('hidden')
+                                    start_btn = ui.button('启动', icon='start', on_click=lambda t=tab.name: self.start(t)).props('color=green')
+                                    stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab.name: self.stop(t)).props('color=red').classes('hidden')
+                                    pause_btn = ui.button('暂停', icon='pause', on_click=lambda t=tab.name: self.pause(t)).props('color=orange').classes('hidden')
+                                    restore_btn = ui.button('恢复', icon='restore', on_click=lambda t=tab.name: self.restore(t)).props('color=green').classes('hidden')
 
                                     # 使用默认参数捕获当前 tab 的值
-                                    edit_btn = ui.button('修改', icon='edit', on_click=lambda t=tab['name']: self.update_tab(t))
-                                    del_btn = ui.button('删除', icon='delete_forever', on_click=lambda t=tab['name']: self.remove_tab(t))
+                                    edit_btn = ui.button('修改', icon='edit', on_click=lambda t=tab.name: self.update_tab(t))
+                                    del_btn = ui.button('删除', icon='delete_forever', on_click=lambda t=tab.name: self.remove_tab(t))
 
                                     # 将按钮的引用存储到 self.tab_buttons 中
-                                    self.tab_buttons[tab['name']] = {
+                                    self.tab_buttons[tab.name] = {
                                         'start_btn': start_btn,
                                         'stop_btn': stop_btn,
                                         'pause_btn': pause_btn,
@@ -170,17 +118,22 @@ class GuiApp:
                                         'del_btn': del_btn,
                                     }
 
-                                    if self.target_running[tab['name']]:
+                                    if self.target_running[tab.name]:
                                         start_btn.classes(add='hidden')
                                         stop_btn.classes(remove='hidden')
                                         pause_btn.classes(remove='hidden')
                                         edit_btn.classes(add='hidden')
                                         del_btn.classes(add='hidden')
+                                    ui.space()
+                                    ui.select({10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR'},
+                                              value=20, label='日志级别',
+                                              on_change=lambda level, t=tab.name: self.log_manager.set_level(t, level.value)
+                                              ).classes('w-20')
 
-                                    self._create_configuration_tabs(tab['name'])
+                                    self._create_configuration_tabs(tab.name)
 
-                            with ui.column().classes('h-full').style('width:31vw;height:35vw;overflow-y:auto;'):
-                                self._log_bind(tab['name'])
+                            with ui.column().classes('h-full').style('width:31vw;height:37vw;overflow-y:auto;'):
+                                self.log_manager.get_logger(tab.name)
 
                 with ui.tab_panel(self.add_tab):
                     with ui.column().classes('w-full'):
@@ -255,10 +208,10 @@ class GuiApp:
         """添加新标签页"""
         new_tab_name = self.new_tab_input.value
         if new_tab_name:
-            if self.db.fetch_one("SELECT name FROM module WHERE name = ?", (new_tab_name,)):
+            if Module.get_or_none(Module.name == new_tab_name):
                 ui.notify('该名称已存在', color='red')
                 return
-            self.db.insert_data("module", ["name"], [new_tab_name])
+            Module.create(name=new_tab_name)
             self.new_tab_input.value = ''
             self.load_tabs()
             self.vertical_tabs.value = new_tab_name
@@ -277,10 +230,10 @@ class GuiApp:
     def _confirm_update_tab(self, old_name, new_name, dialog):
         """确认修改标签页"""
         if new_name:
-            if self.db.fetch_one("SELECT name FROM module WHERE name = ?", (new_name,)):
+            if Module.get_or_none(Module.name == new_name):
                 ui.notify('该名称已存在', color='red')
                 return
-            self.db.execute_update("UPDATE module SET name = ? WHERE name = ?", (new_name, old_name))
+            Module.update(name=new_name).where(Module.name == old_name).execute()
             self.load_tabs()
             self.vertical_tabs.value = new_name
             dialog.close()  # 关闭对话框
@@ -297,13 +250,24 @@ class GuiApp:
 
     def _confirm_remove_tab(self, tab_name, dialog):
         """确认删除标签页"""
-        self.db.execute_update("DELETE FROM module WHERE name = ?", (tab_name,))
+        Module.delete().where(Module.name == tab_name).execute()
         self.load_tabs()
         dialog.close()
+
+    def check_update(self):
+        # res = requests.get('')
+        ui.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
+        ui.notify(
+            '检查更新\n'
+            '无更新',
+            multi_line=True,
+            classes='multi-line-notification',
+        )
 
     def run(self):
         """启动应用"""
         app.on_startup(self.on_startup)
         app.on_shutdown(self.on_close)
         self.load_tabs()
-        ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='open', favicon='🔧', reload=False)
+        self.check_update()
+        ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='Nova-AutoScript', favicon='🔧', reload=False)

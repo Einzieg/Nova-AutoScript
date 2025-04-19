@@ -1,13 +1,15 @@
 import logging
 import os
+import re
 import subprocess
-import sys
 import time
 from threading import Lock
 
+from core.LogManager import LogManager
+
 
 class AdbClient:
-    def __init__(self, ip=None, port=5555, adb_path=None, max_retries=3, retry_delay=2):
+    def __init__(self, name, ip="127.0.0.1", port=5555, adb_path=None, max_retries=3, retry_delay=2):
         """
         初始化AdbClient实例。
         :param ip: 设备IP地址，默认为None。
@@ -21,26 +23,52 @@ class AdbClient:
         self.connected = False  # 跟踪连接状态
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.name = name
+        self.logging = LogManager()
         self.lock = Lock()  # 确保命令唯一执行
         if adb_path is None:
-            # 自动确定adb路径
-            if getattr(sys, 'frozen', False):
-                base_path = getattr(sys, '_MEIPASS', os.path.abspath("."))
-            else:
-                base_path = os.getcwd()
-            self.adb_path = os.path.join(base_path, 'static/platform-tools', 'adb.exe')
-            if not os.path.exists(self.adb_path):
-                raise FileNotFoundError(f"ADB路径 {self.adb_path} 不存在")
+            self.adb_path = self.get_adb_path()
         else:
             self.adb_path = adb_path
             if not os.path.exists(self.adb_path):
                 raise FileNotFoundError(f"ADB路径 {self.adb_path} 不存在")
 
+    def get_adb_path(self):
+        possible_adb_paths = [
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Android", "Sdk", "platform-tools"),
+            os.path.join(os.environ.get("USERPROFILE", ""), "AppData", "Local", "Android", "Sdk", "platform-tools"),
+            os.path.join(os.environ.get("ProgramFiles", ""), "Android", "platform-tools"),
+        ]
+        for path in possible_adb_paths:
+            if os.path.exists(os.path.join(path, "adb.exe")):
+                return os.path.join(path, "adb.exe")
+
+        try:
+            # 执行 adb version 命令
+            result = subprocess.run(
+                ["adb", "version"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            match = re.search(r"Installed as (.+)$", result.stdout, re.MULTILINE)
+
+            if match:
+                return match.group(1).strip()
+            else:
+                return None
+        except Exception as e:
+            self.logging.log(f"adb version 命令执行失败: {e}", self.name, logging.ERROR)
+
+        for path in os.environ["PATH"].split(";"):
+            if os.path.exists(os.path.join(path, "adb.exe")):
+                return os.path.join(path, "adb.exe")
+
     def connect_tcp(self):
         """建立TCP连接"""
         for attempt in range(self.max_retries + 1):
             if self.connected:
-                logging.debug("已连接，跳过重复连接")
+                self.logging.log("已连接，跳过重复连接", self.name, logging.DEBUG)
                 return True
             if not self.ip:
                 raise ValueError("IP地址不能为空")
@@ -52,18 +80,18 @@ class AdbClient:
 
                 # 处理连接结果
                 if "connected to" in result_lower or "already connected" in result_lower:
-                    logging.info(f"成功连接至 {self.ip}:{self.port}")
+                    self.logging.log(f"成功连接至 {self.ip}:{self.port}", self.name, logging.INFO)
                     self.connected = True
                     return True
                 else:
-                    logging.warning(f"连接尝试 {attempt + 1}/{self.max_retries} 失败: {result.strip()}")
+                    self.logging.log(f"连接尝试 {attempt + 1}/{self.max_retries} 失败: {result.strip()}", self.name, logging.WARNING)
                     if attempt < self.max_retries:
-                        logging.info(f"等待 {self.retry_delay} 秒后重试...")
+                        self.logging.log(f"等待 {self.retry_delay} 秒后重试...", self.name, logging.INFO)
                         time.sleep(self.retry_delay)
             except Exception as e:
-                logging.error(f"连接尝试 {attempt + 1}/{self.max_retries} 出错: {str(e)}")
+                self.logging.log(f"连接尝试 {attempt + 1}/{self.max_retries} 出错: {str(e)}", self.name, logging.ERROR)
                 if attempt < self.max_retries:
-                    logging.info(f"等待 {self.retry_delay} 秒后重试...")
+                    self.logging.log(f"等待 {self.retry_delay} 秒后重试...", self.name, logging.INFO)
                     time.sleep(self.retry_delay)
 
         return False
@@ -73,9 +101,9 @@ class AdbClient:
         if self.connected:
             try:
                 self._run_command(["disconnect", f"{self.ip}:{self.port}"])
-                logging.info(f"已断开 {self.ip}:{self.port}")
+                self.logging.log(f"已断开 {self.ip}:{self.port}", self.name, logging.INFO)
             except Exception as e:
-                logging.error(f"断开连接时出错: {str(e)}")
+                self.logging.log(f"断开连接时出错: {str(e)}", self.name, logging.ERROR)
             finally:
                 self.connected = False
 
@@ -83,7 +111,7 @@ class AdbClient:
         """执行shell命令"""
         with self.lock:
             if not self.connected:
-                logging.warning("尝试重新连接设备...")
+                self.logging.log("尝试重新连接设备...", self.name, logging.WARNING)
                 if not self.connect_tcp():
                     raise RuntimeError("无法连接设备")
             return self._run_command(["shell", command])
@@ -92,26 +120,26 @@ class AdbClient:
         """拉取文件"""
         with self.lock:
             if not self.connected:
-                logging.warning("尝试重新连接设备...")
+                self.logging.log("尝试重新连接设备...", self.name, logging.WARNING)
                 if not self.connect_tcp():
                     raise RuntimeError("无法连接设备")
             self._run_command(["pull", remote_path, local_path])
-            logging.info(f"文件已拉取: {remote_path} -> {local_path}")
+            self.logging.log(f"文件已拉取: {remote_path} -> {local_path}", self.name, logging.DEBUG)
 
     def push(self, local_path, remote_path):
         """推送文件"""
         with self.lock:
             if not self.connected:
-                logging.warning("尝试重新连接设备...")
+                self.logging.log("尝试重新连接设备...", self.name, logging.WARNING)
                 if not self.connect_tcp():
                     raise RuntimeError("无法连接设备")
             self._run_command(["push", local_path, remote_path])
-            logging.info(f"文件已推送: {local_path} -> {remote_path}")
+            self.logging.log(f"文件已推送: {local_path} -> {remote_path}", self.name, logging.DEBUG)
 
     def _run_command(self, command):
         """执行底层ADB命令"""
         full_cmd = [self.adb_path, "-s", f"{self.ip}:{self.port}"] + command
-        logging.debug(f"执行命令: {' '.join(full_cmd)}")
+        self.logging.log(f"执行命令: {' '.join(full_cmd)}", self.name, logging.DEBUG)
 
         try:
             start_time = time.time()
@@ -125,7 +153,7 @@ class AdbClient:
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
             elapsed = time.time() - start_time
-            logging.debug(f"命令执行耗时: {elapsed:.2f}s")
+            self.logging.log(f"命令执行耗时: {elapsed:.2f}s", self.name, logging.DEBUG)
 
             if result.returncode != 0:
                 error_msg = result.stderr.strip() or result.stdout.strip()
@@ -137,3 +165,13 @@ class AdbClient:
         except Exception as e:
             raise RuntimeError(f"意外错误: {str(e)}")
 
+    @staticmethod
+    def get_device_id_by_port(port):
+        """根据端口号获取ADB设备ID"""
+        result = subprocess.run(["adb", "devices"], capture_output=True, text=True)
+        for line in result.stdout.splitlines():
+            if f":{port}" in line:
+                parts = line.strip().split()
+                if len(parts) >= 2 and parts[1] == "device":
+                    return parts[0]
+        return None

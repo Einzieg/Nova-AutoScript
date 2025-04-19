@@ -1,64 +1,92 @@
-from nicegui import ui, app
-from nicegui.html import embed
+import logging
+import webbrowser
 
-from device_operation.SQLiteClient import SQLiteClient
+from nicegui import ui, app
+
+from models.Config import Config
 
 
 class GuiAppSetting:
+
     def __init__(self):
-        self.db = SQLiteClient()
+        self.conf = Config.get_or_create(id=1)[0]
+        self.dark_mode = ui.dark_mode()
+        self.dark_btn = None
+        self.light_btn = None
 
     @staticmethod
     def on_close():
         """关闭应用"""
-        ui.notify('应用已关闭')
         app.shutdown()
-
-    @staticmethod
-    def _bool_to_blob(value):
-        """将布尔值转换为 BLOB"""
-        return bytes([int(value)])
-
-    @staticmethod
-    def _blob_to_bool(blob):
-        """将 BLOB 转换为布尔值"""
-        return bool(blob[0]) if blob else True  # 默认深色模式
 
     def on_startup(self):
         """应用启动时加载主题配置"""
-        result = self.db.fetch_one("SELECT dark_mode FROM config WHERE id = 1")
-        if result:
-            is_dark = self._blob_to_bool(result['dark_mode'])
-            if is_dark:
-                ui.dark_mode().enable()
-            else:
-                ui.dark_mode().disable()
+        if bool(self.conf.dark_mode):
+            self.dark_mode.enable()
+        else:
+            self.dark_mode.disable()
 
     def create_setting_tab_panel(self):
         """创建Setting标签页内容"""
         with ((ui.tab_panel('设置'))):
+
             # 主题切换按钮
             with ui.row().classes('items-center'):
                 ui.label('切换主题:').classes('text-xl')
-                ui.button('深色模式', icon='dark_mode', on_click=lambda: self.change_theme(True)).props('color=dark text-color=white')
-                ui.button('浅色模式', icon='light_mode', on_click=lambda: self.change_theme(False)).props('color=white text-color=black')
+
+                self.dark_btn = ui.button('深色模式', icon='dark_mode', on_click=lambda: self.change_theme(True)).props('color=dark text-color=white')
+                self.light_btn = ui.button('浅色模式', icon='light_mode', on_click=lambda: self.change_theme(False)).props('color=white text-color=black')
+
+                if bool(self.conf.dark_mode):
+                    self.dark_btn.classes(add='hidden')
+                else:
+                    self.light_btn.classes(add='hidden')
+
             with ui.row().classes('items-center'):
                 ui.label('邮件配置:').classes('text-xl')
-                conf = self.db.fetch_one("SELECT email, password, receiver FROM config WHERE id = 1")
-                email = ui.input('邮箱地址', placeholder='请输入邮箱地址', value=conf.get('email'))
-                password = ui.input('邮箱密码/授权码', placeholder='请输入邮箱密码', password=True, value=conf.get('password'))
-                receiver = ui.input('收件人邮箱', placeholder='请输入收件人邮箱', value=conf.get('receiver'))
-                ui.button('保存', on_click=lambda: self.db.execute_update("UPDATE config SET email = ?, password = ?, receiver = ? WHERE id = 1", (email.value, password.value, receiver.value))
-                          ).props('color=primary')
+                email = ui.input('邮箱地址', placeholder='请输入邮箱地址', value=self.conf.email)
+                password = ui.input('邮箱密码/授权码', placeholder='请输入邮箱密码', password=True, value=self.conf.password)
+                receiver = ui.input('收件人邮箱', placeholder='请输入收件人邮箱', value=self.conf.receiver)
+            with ui.row().classes('items-center'):
+                ui.label('模拟器配置:').classes('text-xl')
+                simulator_path = ui.input(label='MuMu模拟器路径', value=self.conf.simulator_path).style('width: 400px')
+            with ui.row().classes('items-center'):
+                ui.label('操作设置:').classes('text-xl')
+                cap_tool = ui.select(label='截图工具', options=['MuMu', 'MiniCap', 'DroidCast', 'ADB'], value=self.conf.cap_tool).classes('w-32')
+                touch_tool = ui.select(label='点击工具', options=['MuMu', 'MiniTouch', 'MaaTouch', 'ADB'], value=self.conf.touch_tool).classes('w-32')
 
-            ui.button('关闭', on_click=self.on_close)
+            with ui.row().classes('w-full items-center'):
+                ui.button('保存设置',
+                          on_click=lambda: _save_settings()
+                          ).props('color=primary')
+                ui.space()
+                ui.button('打开操作手册', on_click=lambda: webbrowser.open('https://github.com/NakanoSanku/msc'))
+                ui.button('退出', color='negative', on_click=self.on_close)
+
+        def _save_settings():
+            """保存设置"""
+            try:
+                Config.update(email=email.value,
+                              password=password.value,
+                              receiver=receiver.value,
+                              simulator_path=simulator_path.value,
+                              cap_tool=cap_tool.value,
+                              touch_tool=touch_tool.value
+                              ).execute()
+                ui.notify('保存成功', type='positive')
+            except Exception as e:
+                ui.notify('保存失败', type='negative')
+                logging.error(f"保存设置失败: {e}")
 
     def change_theme(self, is_dark):
         """切换主题并保存配置"""
         if is_dark:
-            ui.dark_mode().enable()  # 切换到深色模式
+            self.dark_btn.classes(add='hidden')
+            self.light_btn.classes(remove='hidden')
+            self.dark_mode.enable()
         else:
-            ui.dark_mode().disable()  # 切换到浅色模式
+            self.dark_btn.classes(remove='hidden')
+            self.light_btn.classes(add='hidden')
+            self.dark_mode.disable()
 
-        # 保存主题配置到数据库
-        self.db.execute_update("UPDATE config SET dark_mode = ? WHERE id = 1", (self._bool_to_blob(is_dark),))
+        Config.update(dark_mode=is_dark).execute()

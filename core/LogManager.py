@@ -13,10 +13,9 @@ class LogManager:
             cls._instance = super(LogManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, log_level):
+    def __init__(self):
         if not hasattr(self, 'initialized'):
             self.loggers = {}
-            self.log_level = log_level
             self.log_dir = os.path.join(os.getcwd(), 'logs')
             if not os.path.exists(self.log_dir):
                 os.makedirs(self.log_dir)
@@ -26,30 +25,23 @@ class LogManager:
         """获取指定 tab_name 的 logger"""
         if tab_name not in self.loggers:
             logger = logging.getLogger(tab_name)
-            logger.setLevel(logging.DEBUG)  # 默认日志级别是 DEBUG
+            logger.setLevel(logging.INFO)  # 默认日志级别
 
-            # 创建日志流处理器
             log_stream = ui.log(max_lines=1000).classes('h-full w-full')
 
-            # 创建一个自定义的日志处理器
             class UIStreamHandler(logging.Handler):
                 def emit(self, record):
-
                     log_stream.push(record.getMessage())
 
-            # 创建格式化器
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-            # 创建处理器并设置格式化器
             handler = UIStreamHandler()
             handler.setFormatter(formatter)
 
-            # 添加文件处理器
             log_file = os.path.join(self.log_dir, f"{datetime.now().strftime('%Y-%m-%d')}_{tab_name}.log")
-            file_handler = logging.FileHandler(log_file)
+            file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
             file_handler.setFormatter(formatter)
 
-            # 将这两个处理器添加到日志器
             logger.addHandler(handler)
             logger.addHandler(file_handler)
             self.loggers[tab_name] = logger

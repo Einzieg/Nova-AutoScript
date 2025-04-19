@@ -1,155 +1,206 @@
+import asyncio
 import logging
+import subprocess
 import time
+from pathlib import Path
 
-import cv2
+from msc.adbcap import ADBCap
+from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
-from msc.mumu import MuMuScreenCap, get_mumu_path
+from msc.mumu import MuMuCap
+from msc.screencap import ScreenCap
+from mtc.adb import ADBTouch
+from mtc.maatouch import MaaTouch
+from mtc.minitouch import MiniTouch
 from mtc.mumu import MuMuTouch
+from mtc.touch import Touch
 
-from AdbClient import AdbClient
-from path_util import resource_path
+from core.LogManager import LogManager
+from device_operation.AdbClient import AdbClient
+from models import Config, Module
 
 
 class DeviceUtils:
-    def __init__(self, ip="127.0.0.1", port=5555, instance_index=None, mumu_path=None):
+    CAP_TOOLS = {
+        'MuMu': MuMuCap,
+        'ADB': ADBCap,
+        'MiniCap': MiniCap,
+        'DroidCast': DroidCast
+    }
+    TOUCH_TOOLS = {
+        'MuMu': MuMuTouch,
+        'ADB': ADBTouch,
+        'MiniTouch': MiniTouch,
+        'MaaTouch': MaaTouch
+    }
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(DeviceUtilsB, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self, name):
         """
         初始化DeviceUtils实例。
-        :param ip: 设备IP地址，默认为"127.0.0.1"。
-        :param port: 设备端口号，默认为5555。
-        :param instance_index: 实例索引，用于计算多开设备的端口号，默认为None。
+        :param name: 任务名称
         """
-        self.ip = ip
-        self.port = port
-        self.instance_index = instance_index
-        self.mumu_path = mumu_path
+        self.conf = Config.get_or_create(id=1)[0]
+        self.module = Module.get_or_none(Module.name == name)
+        self.name = name
+        self.logging = LogManager()
 
-        if instance_index is not None:
-            self.port = 16384 + 32 * instance_index
-            logging.info(f"计算端口号为 {self.port}")
+        if self.module.simulator_index < 5555:
+            self.port = 16384 + 32 * self.module.simulator_index
+            self._log(f"计算端口号为 {self.port}", logging.DEBUG)
+        else:
+            self.port = self.module.simulator_index
 
-        self.adb = AdbClient(ip=self.ip, port=self.port)
+        self.adb = AdbClient(self.name, port=self.port)
+        self.push_scripts()
 
-        # 初始化截图工具
-        self.screencap_tool = self._initialize_screencap()
+    @staticmethod
+    def __perform_screencap(controller: ScreenCap):
+        return controller.screencap()
 
-        # 初始化点击工具
-        self.click_tool = self._initialize_click_tool()
-
-    def _initialize_screencap(self):
-        """根据优先顺序初始化截图工具"""
-        try:
-            # 尝试使用MuMu进行截图
-            if get_mumu_path():
-                self.mumu_path = get_mumu_path()  # 获取MuMu路径
-                mumu_screencap = MuMuScreenCap(self.instance_index, emulator_install_path=self.mumu_path)
-                logging.info("使用MuMu进行屏幕截图")
-                return mumu_screencap
-            else:
-                raise Exception("MuMu路径未找到")
-
-        except Exception as e:
-            logging.error(f"MuMu初始化失败: {str(e)}")
-            try:
-                # 如果MuMu失败，尝试使用Minicap
-                minicap = MiniCap(f"{self.ip}:{self.port}")
-                logging.info("使用Minicap进行屏幕截图")
-                return minicap
-            except Exception as e:
-                logging.error(f"Minicap初始化失败: {str(e)}")
-                # 如果Minicap也失败，则使用ADB进行截图
-                logging.info("使用ADB进行屏幕截图")
-                return self.adb
-
-    def _initialize_click_tool(self):
-        """初始化点击工具"""
-        try:
-            # 尝试使用MuMu进行点击
-            if get_mumu_path():
-                self.mumu_path = get_mumu_path()  # 获取MuMu路径
-                mumu_touch = MuMuTouch(self.instance_index, emulator_install_path=self.mumu_path)
-                logging.info("使用MuMu进行点击操作")
-                return mumu_touch
-            else:
-                raise Exception("MuMu路径未找到")
-
-        except Exception as e:
-            logging.error(f"MuMu点击初始化失败: {str(e)}")
-            try:
-                # 如果MuMu失败，尝试使用ADB进行点击
-                logging.info("使用ADB进行点击操作")
-                return self.adb
-            except Exception as e:
-                logging.error(f"ADB点击初始化失败: {str(e)}")
-                raise
-
-    def adb_shell(self, command):
-        """执行ADB shell命令"""
-        try:
-            return self.adb.shell(command)
-        except Exception as e:
-            logging.error(f"执行命令 {command} 时出错: {str(e)}")
-            raise
+    @staticmethod
+    def __perform_click(controller: Touch, x, y):
+        controller.click(x, y)
 
     def push_scripts(self):
         """推送脚本文件到设备"""
         try:
-            self.adb.push(resource_path("static/zoom_in.sh"), "/sdcard/zoom_in.sh")
-            self.adb.push(resource_path("static/zoom_out.sh"), "/sdcard/zoom_out.sh")
-            logging.debug("脚本文件推送成功")
+            self.adb.push(Path(__file__).resolve().parent / "static/zoom_out.sh", "/sdcard/zoom_out.sh")
+            self._log("脚本文件推送成功", logging.DEBUG)
         except Exception as e:
-            logging.error(f"推送脚本文件时出错: {str(e)}")
+            self._log(f"推送脚本文件时出错: {str(e)}", logging.ERROR)
             raise
 
     def click_back(self):
         """模拟点击返回键"""
         try:
             self.adb.shell("input keyevent 4")
-            logging.debug("已点击返回键")
+            self._log("已点击返回键", logging.DEBUG)
         except Exception as e:
-            logging.error(f"点击返回键时出错: {str(e)}")
+            self._log(f"点击返回键时出错: {str(e)}", logging.ERROR)
             raise
 
     def zoom_out(self):
         """执行缩放操作"""
         try:
             self.adb.shell("sh /sdcard/zoom_out.sh")
-            logging.debug("已执行缩放操作")
+            self._log("已执行缩放操作", logging.DEBUG)
         except Exception as e:
-            logging.error(f"执行缩放操作时出错: {str(e)}")
+            self._log(f"执行缩放操作时出错: {str(e)}", logging.ERROR)
             raise
 
-    def screencap(self, file_name: str = "screenshot.png"):
-        """
-        使用已经初始化的截图工具进行屏幕截图。
-        :param file_name: 保存的文件名，默认为"screenshot.png"
-        """
+    def get_screencap(self):
         start_time = time.time()
-        try:
-            if isinstance(self.screencap_tool, MuMuScreenCap):
-                self.screencap_tool.save_screencap(file_name)
-                logging.debug(f"使用MuMu屏幕截图，保存为 {file_name} ,耗时 {time.time() - start_time:.2f}s")
-            elif isinstance(self.screencap_tool, MiniCap):
-                self.screencap_tool.save_screencap(file_name)
-                logging.debug(f"使用Minicap屏幕截图，保存为 {file_name} ,耗时 {time.time() - start_time:.2f}s")
-            else:
-                self.screencap_tool.shell(f"screencap -p /sdcard/{file_name}")
-                self.screencap_tool.pull(f"/sdcard/{file_name}", file_name)
-                logging.debug(f"使用ADB屏幕截图，保存为 {file_name} ,耗时 {time.time() - start_time:.2f}s")
-        except Exception as e:
-            logging.error(f"截图时出错: {str(e)}")
-            raise
-        return cv2.imread(file_name)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                tool_class = self.CAP_TOOLS.get(self.conf.cap_tool)
+                if not tool_class:
+                    raise TypeError("未知的截图工具")
+                if tool_class.__name__ == 'MuMuCap':
+                    controller = tool_class(instance_index=self.module.simulator_index)
+                else:
+                    controller = tool_class(serial=f'127.0.0.1:{self.port}')
+                self._log(f"截图成功,耗时 {time.time() - start_time:.2f}s", logging.DEBUG)
+                return self.__perform_screencap(controller)
+            except Exception as e:
+                self._log(f"截图失败, 重试次数 {attempt + 1}: {str(e)}", logging.ERROR)
+                if attempt < max_retries:
+                    continue
+                else:
+                    self._log(f"截图失败: {str(e)}", logging.ERROR)
+                    raise e
 
     def click(self, coordinate):
-        """使用已经初始化的点击工具进行点击操作"""
         x, y = coordinate
         try:
-            if isinstance(self.click_tool, MuMuTouch):
-                self.click_tool.click(x, y)
-                logging.debug(f"MuMu点击坐标 ({x}, {y})")
+            tool_class = self.TOUCH_TOOLS.get(self.conf.touch_tool)
+            if not tool_class:
+                raise ValueError("未知的点击工具")
+            if tool_class.__name__ == 'MuMuTouch':
+                controller = tool_class(instance_index=self.module.simulator_index)
             else:
-                self.click_tool.shell(f"input tap {x} {y}")
-                logging.debug(f"ADB点击坐标 ({x}, {y})")
+                controller = tool_class(serial=f'127.0.0.1:{self.port}')
+            self.__perform_click(controller, x, y)
         except Exception as e:
-            logging.error(f"点击坐标 ({x}, {y}) 时出错: {str(e)}")
+            self._log(f"点击坐标时出错: {str(e)}", logging.ERROR)
             raise
+
+    def start_simulator(self):
+        try:
+            if self.conf.simulator_path:
+                subprocess.Popen([self.conf.simulator_path, "-v", str(self.module.simulator_index)],
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE,
+                                 stdin=subprocess.PIPE,
+                                 encoding="utf-8",
+                                 shell=False)
+                self._log("启动模拟器成功", logging.INFO)
+            else:
+                self._log("模拟器路径未设置", logging.ERROR)
+                raise Exception("模拟器路径未设置")
+        except Exception as e:
+            self._log(f"启动模拟器失败: {str(e)}", logging.ERROR)
+            raise
+
+    async def check_running_status(self):
+        """检查应用是否正在运行"""
+        try:
+            output = self.adb.shell("ps")
+            if "com.stone3.ig" in output:
+                self._log("应用正在运行", logging.INFO)
+                output = self.adb.shell("dumpsys window | grep mFocusedWindow")
+                if "com.stone3.ig" in output:
+                    self._log("应用在前台运行", logging.INFO)
+                    return True
+                else:
+                    self._log("应用未在前台运行,尝试重新打开应用", logging.INFO)
+                    self.close_app()
+                    await asyncio.sleep(3)
+                    self.launch_app()
+            else:
+                self.launch_app()
+        except Exception as e:
+            self._log(f"检查应用运行状态时出错: {str(e)}", logging.ERROR)
+            raise
+
+    def launch_app(self):
+        try:
+            self.adb.shell("am start -n com.stone3.ig/com.google.firebase.MessagingUnityPlayerActivity")
+            self._log("已启动应用", logging.INFO)
+        except Exception as e:
+            self._log(f"启动应用时出错: {str(e)}", logging.ERROR)
+            raise
+
+    def close_app(self):
+        try:
+            self.adb.shell("am force-stop com.stone3.ig")
+            self._log("已关闭应用", logging.DEBUG)
+        except Exception as e:
+            self._log(f"关闭应用时出错: {str(e)}", logging.ERROR)
+            raise
+
+    def check_wm_size(self):
+        # 优化屏幕尺寸解析逻辑
+        try:
+            output = self.adb.shell("wm size").strip()
+            if output.startswith("Physical size:"):
+                parts = output.split()
+                if len(parts) >= 3:
+                    width, height = map(int, parts[2].split('x'))
+                    self._log(f"获取屏幕尺寸为 {width}x{height}", logging.DEBUG)
+                    return width, height
+            self._log("未找到屏幕尺寸信息", logging.DEBUG)
+            return None, None
+        except Exception as e:
+            self._log(f"获取屏幕尺寸时出错: {str(e)}", logging.ERROR)
+
+    # 新增日志封装方法（减少重复代码）
+    def _log(self, message, level=logging.INFO):
+        self.logging.log(message, self.name, level)
