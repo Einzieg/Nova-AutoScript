@@ -1,4 +1,7 @@
+from core.ControlTools import ControlTools
 from core.LogManager import LogManager
+from device_operation.DeviceUtils import DeviceUtils
+from models.Module import Module
 
 WAITING = 0
 RUNNING = 1
@@ -7,9 +10,12 @@ FAILED = -1
 
 
 class TaskBase:
-    def __init__(self):
+    def __init__(self,  target):
         self.status = WAITING
         self.logging = LogManager()
+        self.device = DeviceUtils(target)
+        self.control = ControlTools(target, self.device)
+        self.module = Module.get(Module.name == target)
 
     async def prepare(self):
         """任务前置操作"""

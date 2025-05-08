@@ -3,7 +3,7 @@ import asyncio
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
 from core.task.daily_tasks.DailyTest import DailyTest
-from core.task.outer_tasks.TestTask import TestTask
+from core.task.outer_tasks.BlessingFlip import BlessingFlip
 from core.task.permanent_tasks.Permanent import Permanent
 
 
@@ -18,13 +18,12 @@ class MainProcess:
 
     async def run(self):
         self.load_tasks()
-        # while True:
         try:
             for task in self.tasks:
                 try:
-                    await task['instance'].prepare()
-                    await task['instance'].execute()
-                    await task['instance'].cleanup()
+                    await task.prepare()
+                    await task.execute()
+                    await task.cleanup()
                 except Exception as e:
                     self.logging.log(f"任务 [{self.target}] 执行异常: {e}", self.target)
 
@@ -32,28 +31,16 @@ class MainProcess:
             self.app.stop(self.target)
         except asyncio.CancelledError:
             self.logging.log(f"任务 [{self.target}] 停止", self.target)
-            # break
         except TaskFinishes as e:
             self.logging.log(f"任务 [{self.target}] 执行完成: {e}", self.target)
             self.app.stop(self.target)
-            # break
         except Exception as e:
             self.logging.log(f"任务 [{self.target}] 执行异常: {e}", self.target)
             self.app.stop(self.target)
-            # break
 
     def load_tasks(self):
-        self.tasks = (
-            {
-                'model': 'DailyTest',
-                'instance': DailyTest(self.target),
-            },
-            {
-                'model': 'TestTask',
-                'instance': TestTask(self.target),
-            },
-            {
-                'model': 'PerTest',
-                'instance': Permanent(self.target),
-            }
-        )
+        self.tasks = [
+            DailyTest(self.target),
+            # BlessingFlip(self.target),
+            Permanent(self.target),
+        ]

@@ -38,7 +38,7 @@ class DeviceUtils:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(DeviceUtilsB, cls).__new__(cls)
+            cls._instance = super(DeviceUtils, cls).__new__(cls)
         return cls._instance
 
     def __init__(self, name):
@@ -53,7 +53,7 @@ class DeviceUtils:
 
         if self.module.simulator_index < 5555:
             self.port = 16384 + 32 * self.module.simulator_index
-            self._log(f"计算端口号为 {self.port}", logging.DEBUG)
+            self.logging.log(f"计算端口号为 {self.port}", self.name, logging.DEBUG)
         else:
             self.port = self.module.simulator_index
 
@@ -71,28 +71,28 @@ class DeviceUtils:
     def push_scripts(self):
         """推送脚本文件到设备"""
         try:
-            self.adb.push(Path(__file__).resolve().parent / "static/zoom_out.sh", "/sdcard/zoom_out.sh")
-            self._log("脚本文件推送成功", logging.DEBUG)
+            self.adb.push(str(Path(__file__).resolve().parent.parent / "static/zoom_out.sh"), "/sdcard/zoom_out.sh")
+            self.logging.log("脚本文件推送成功", self.name, logging.DEBUG)
         except Exception as e:
-            self._log(f"推送脚本文件时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"推送脚本文件时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     def click_back(self):
         """模拟点击返回键"""
         try:
             self.adb.shell("input keyevent 4")
-            self._log("已点击返回键", logging.DEBUG)
+            self.logging.log("已点击返回键", self.name, logging.DEBUG)
         except Exception as e:
-            self._log(f"点击返回键时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"点击返回键时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     def zoom_out(self):
         """执行缩放操作"""
         try:
             self.adb.shell("sh /sdcard/zoom_out.sh")
-            self._log("已执行缩放操作", logging.DEBUG)
+            self.logging.log("已执行缩放操作", self.name, logging.DEBUG)
         except Exception as e:
-            self._log(f"执行缩放操作时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"执行缩放操作时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     def get_screencap(self):
@@ -107,14 +107,15 @@ class DeviceUtils:
                     controller = tool_class(instance_index=self.module.simulator_index)
                 else:
                     controller = tool_class(serial=f'127.0.0.1:{self.port}')
-                self._log(f"截图成功,耗时 {time.time() - start_time:.2f}s", logging.DEBUG)
-                return self.__perform_screencap(controller)
+                screencap = self.__perform_screencap(controller)
+                self.logging.log(f"{self.conf.cap_tool} 截图成功,耗时 {time.time() - start_time:.2f}s", self.name, logging.DEBUG)
+                return screencap
             except Exception as e:
-                self._log(f"截图失败, 重试次数 {attempt + 1}: {str(e)}", logging.ERROR)
+                self.logging.log(f"{self.conf.cap_tool} 截图失败, 重试次数 {attempt + 1}: {str(e)}", self.name, logging.ERROR)
                 if attempt < max_retries:
                     continue
                 else:
-                    self._log(f"截图失败: {str(e)}", logging.ERROR)
+                    self.logging.log(f"{self.conf.cap_tool} 截图失败: {str(e)}", self.name, logging.ERROR)
                     raise e
 
     def click(self, coordinate):
@@ -129,7 +130,7 @@ class DeviceUtils:
                 controller = tool_class(serial=f'127.0.0.1:{self.port}')
             self.__perform_click(controller, x, y)
         except Exception as e:
-            self._log(f"点击坐标时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"点击坐标时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     def start_simulator(self):
@@ -141,12 +142,12 @@ class DeviceUtils:
                                  stdin=subprocess.PIPE,
                                  encoding="utf-8",
                                  shell=False)
-                self._log("启动模拟器成功", logging.INFO)
+                self.logging.log("启动模拟器成功", self.name, logging.INFO)
             else:
-                self._log("模拟器路径未设置", logging.ERROR)
+                self.logging.log("模拟器路径未设置", self.name, logging.ERROR)
                 raise Exception("模拟器路径未设置")
         except Exception as e:
-            self._log(f"启动模拟器失败: {str(e)}", logging.ERROR)
+            self.logging.log(f"启动模拟器失败: {str(e)}", self.name, logging.ERROR)
             raise
 
     async def check_running_status(self):
@@ -154,36 +155,36 @@ class DeviceUtils:
         try:
             output = self.adb.shell("ps")
             if "com.stone3.ig" in output:
-                self._log("应用正在运行", logging.INFO)
+                self.logging.log("应用正在运行", self.name, logging.INFO)
                 output = self.adb.shell("dumpsys window | grep mFocusedWindow")
                 if "com.stone3.ig" in output:
-                    self._log("应用在前台运行", logging.INFO)
+                    self.logging.log("应用在前台运行", self.name, logging.INFO)
                     return True
                 else:
-                    self._log("应用未在前台运行,尝试重新打开应用", logging.INFO)
+                    self.logging.log("应用未在前台运行,尝试重新打开应用", self.name, logging.INFO)
                     self.close_app()
                     await asyncio.sleep(3)
                     self.launch_app()
             else:
                 self.launch_app()
         except Exception as e:
-            self._log(f"检查应用运行状态时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"检查应用运行状态时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     def launch_app(self):
         try:
             self.adb.shell("am start -n com.stone3.ig/com.google.firebase.MessagingUnityPlayerActivity")
-            self._log("已启动应用", logging.INFO)
+            self.logging.log("已启动应用", self.name, logging.INFO)
         except Exception as e:
-            self._log(f"启动应用时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"启动应用时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     def close_app(self):
         try:
             self.adb.shell("am force-stop com.stone3.ig")
-            self._log("已关闭应用", logging.DEBUG)
+            self.logging.log("已关闭应用", self.name, logging.DEBUG)
         except Exception as e:
-            self._log(f"关闭应用时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"关闭应用时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     def check_wm_size(self):
@@ -194,13 +195,10 @@ class DeviceUtils:
                 parts = output.split()
                 if len(parts) >= 3:
                     width, height = map(int, parts[2].split('x'))
-                    self._log(f"获取屏幕尺寸为 {width}x{height}", logging.DEBUG)
+                    self.logging.log(f"获取屏幕尺寸为 {width}x{height}", self.name, logging.DEBUG)
                     return width, height
-            self._log("未找到屏幕尺寸信息", logging.DEBUG)
+            self.logging.log("未找到屏幕尺寸信息", self.name, logging.DEBUG)
             return None, None
         except Exception as e:
-            self._log(f"获取屏幕尺寸时出错: {str(e)}", logging.ERROR)
+            self.logging.log(f"获取屏幕尺寸时出错: {str(e)}", self.name, logging.ERROR)
 
-    # 新增日志封装方法（减少重复代码）
-    def _log(self, message, level=logging.INFO):
-        self.logging.log(message, self.name, level)

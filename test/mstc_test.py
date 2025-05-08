@@ -24,7 +24,7 @@ def perform_swipe(controller: Touch, points: list, duration: int = 500):
     controller.swipe(points, duration)
 
 
-perform_screencap(MuMuCap(3))
+perform_screencap(MuMuCap(0))
 img = cv2.imread("screencap.png")
 # perform_click(MaaTouch('127.0.0.1:16384'), (200, 300), (400, 300))
 # touch = MaaTouch("127.0.0.1:16384")

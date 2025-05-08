@@ -23,9 +23,9 @@ def perform_click(controller: Touch, x, y):
 
 
 def matching_one():
-    img = perform_screencap(MuMuCap(3))
+    img = perform_screencap(MuMuCap(0))
     # temp = cv2.imread(r"../static/novaimgs/button/btn_close.png")
-    temp = cv2.imread("screencap2.png")
+    temp = cv2.imread("screencap.png")
 
     result = cv2.matchTemplate(img, temp, cv2.TM_CCOEFF_NORMED)
     # 获取到小图的尺寸
@@ -87,17 +87,17 @@ def non_max_suppression(boxes, overlap_thresh=0.5):
         overlaps = w * h
 
         # 计算交并比（IoU）
-        ious = overlaps / (areas[i] + areas[indices[:last]] - overlaps)
+        # iou = overlaps / (areas[i] + areas[indices[:last]] - overlaps)
 
         # 保留 IoU 小于阈值的框
-        indices = indices[np.where(ious <= overlap_thresh)[0]]
+        indices = indices[np.where((overlaps / (areas[i] + areas[indices[:last]] - overlaps)) <= overlap_thresh)[0]]
 
     return [boxes[i] for i in keep]
 
 
 def matching_more():
     img = perform_screencap(MuMuCap(0))
-    temp = cv2.imread("screencap.png")
+    temp = cv2.imread("../static/novaimgs/monsters/elite_lv6.png")
     result = cv2.matchTemplate(img, temp, cv2.TM_CCOEFF_NORMED)
     threshold = 0.75
     locations = np.where(result >= threshold)
@@ -109,13 +109,13 @@ def matching_more():
     # 应用非极大值抑制
     boxes = np.array(boxes)
     filtered_boxes = non_max_suppression(boxes, overlap_thresh=0.5)
-
+    print(filtered_boxes)
     # 绘制过滤后的框
     for box in filtered_boxes:
         x, y, w, h = box
         cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-    print(filtered_boxes)
+        # 标注中心点
+        cv2.circle(img, (x + w // 2, y + h // 2), 5, (0, 0, 255), -1)
     cv2.imshow('result', img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
