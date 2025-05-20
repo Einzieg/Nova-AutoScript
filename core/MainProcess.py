@@ -20,14 +20,12 @@ class MainProcess:
         self.load_tasks()
         try:
             for task in self.tasks:
-                try:
-                    await task.prepare()
-                    await task.execute()
-                    await task.cleanup()
-                except Exception as e:
-                    self.logging.log(f"任务 [{self.target}] 执行异常: {e}", self.target)
+                await task.prepare()
+                await task.execute()
+                await task.cleanup()
 
             await asyncio.sleep(3)
+            self.logging.log(f"任务 [{self.target}] 执行结束", self.target)
             self.app.stop(self.target)
         except asyncio.CancelledError:
             self.logging.log(f"任务 [{self.target}] 停止", self.target)
@@ -40,7 +38,7 @@ class MainProcess:
 
     def load_tasks(self):
         self.tasks = [
-            DailyTest(self.target),
-            # BlessingFlip(self.target),
-            Permanent(self.target),
+            # DailyTest(self.target),
+            BlessingFlip(self.target),
+            # Permanent(self.target),
         ]

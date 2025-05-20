@@ -2,15 +2,19 @@
 import sys
 from pathlib import Path
 
+import msc
+import mtc
 import nicegui
 
 sys.setrecursionlimit(5000)
 
 a = Analysis(
     ['main.py'],
-    pathex=[],
+    pathex=[r'C:\Users\Einzieg\PycharmProjects\NovaAH\.venv'],
     binaries=[],
     datas=[(f'{Path(nicegui.__file__).parent}', 'nicegui'),
+           (f'{Path(msc.__file__).parent}', 'msc'),
+           (f'{Path(mtc.__file__).parent}', 'mtc'),
            ("static", "static")],
     hiddenimports=['nicegui', 'cv2', 'msc', 'mtc'],
     hookspath=[],
@@ -22,16 +26,13 @@ a = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data)
+pyz = PYZ(a.pure, a.zipped_data, gen_pyc=True)
 
 exe = EXE(
     pyz,
     a.scripts,
-    # a.binaries,
-    # a.datas,
-    # [],
     name='NovaAH',
-    icon='static/sgmde.ico',
+    icon='static/script.ico',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

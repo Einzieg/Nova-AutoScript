@@ -25,7 +25,7 @@ class GuiAppConfigurationTabs:
                         ui.number(label='模拟器编号/端口',
                                   precision=0,
                                   min=0,
-                                  on_change=lambda e: Module.update(port=e.value).where(Module.name == tab_name).execute(),
+                                  on_change=lambda e: Module.update(simulator_index=e.value).where(Module.name == tab_name).execute(),
                                   value=module.simulator_index,
                                   ).classes('w-30')
                         ui.checkbox(text='启动时打开模拟器(仅支持MuMu)',

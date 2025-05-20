@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from pathlib import Path
 
 import cv2
@@ -46,12 +47,13 @@ CARDS = [
     ),
 ]
 
+TASK_NAME = "星辰探宝"
+
 
 class BlessingFlip(TaskBase):
 
     def __init__(self, target):
         super().__init__(target)
-        self.name = '星辰探宝'
         self.target = target
 
         self.x_start = 670
@@ -67,16 +69,24 @@ class BlessingFlip(TaskBase):
 
     async def prepare(self):
         await super().prepare()
-        self.logging.log('星辰探宝 开始...', self.target)
+        self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
         try:
-            await self.play_game()
+            for i in range(1, 5):
+                self.logging.log(f"开始第 {i} 轮游戏 >>>", self.target)
+                await self.play_game()
+                self.logging.log(f"第 {i} 轮游戏完成 <<<", self.target)
+                await asyncio.sleep(3)
         except Exception as e:
-            self.logging.log('星辰探宝 失败.', self.target)
+            self.logging.log(f'{TASK_NAME} 失败 <<<', self.target)
             self._update_status(FAILED)
             raise e
+
+    async def cleanup(self):
+        await super().cleanup()
+        self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
 
     def get_card_position(self, row, col):
         x = self.x_start + col * (self.card_width + self.x_gap) + self.card_width // 2
@@ -86,7 +96,7 @@ class BlessingFlip(TaskBase):
     def click_card(self, row, col):
         center = self.get_card_position(row, col)
         self.device.click(center)
-        self.logging.log(f"点击卡牌 ({row}, {col})", self.target)
+        self.logging.log(f"点击卡牌 ({row}, {col})", self.target, logging.DEBUG)
 
     def recognize_card(self, img, card_templates):
         best_match, best_score = None, 0.0
@@ -124,7 +134,6 @@ class BlessingFlip(TaskBase):
                         if card_name:
                             found_entry = None
                             opened += 1
-                            print(f"当前翻开{opened}张卡牌")
                             for entry in opened_cards:
                                 if entry[0] == card_name and (entry[1], entry[2]) != (i, j):
                                     found_entry = entry

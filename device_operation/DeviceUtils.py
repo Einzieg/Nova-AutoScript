@@ -4,6 +4,7 @@ import subprocess
 import time
 from pathlib import Path
 
+
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
@@ -34,18 +35,28 @@ class DeviceUtils:
         'MaaTouch': MaaTouch
     }
 
-    _instance = None
+    _instances = {}
+    _initialized_flags = {}
+    _async_initialized_flags = {}
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(DeviceUtils, cls).__new__(cls)
-        return cls._instance
+    def __new__(cls, name, *args, **kwargs):
+        if name in cls._instances:
+            return cls._instances[name]
+
+        instance = super().__new__(cls)
+        cls._instances[name] = instance
+        cls._initialized_flags[name] = False
+        cls._async_initialized_flags[name] = False
+        return instance
 
     def __init__(self, name):
         """
         初始化DeviceUtils实例。
         :param name: 任务名称
         """
+        if self._initialized_flags[name]:
+            return
+
         self.conf = Config.get_or_create(id=1)[0]
         self.module = Module.get_or_none(Module.name == name)
         self.name = name
@@ -58,7 +69,33 @@ class DeviceUtils:
             self.port = self.module.simulator_index
 
         self.adb = AdbClient(self.name, port=self.port)
-        self.push_scripts()
+        type(self)._initialized_flags[name] = True
+
+    async def async_init(self):
+        """异步初始化逻辑"""
+        name = self.name
+
+        # 如果已异步初始化，跳过
+        if self._async_initialized_flags[name]:
+            return
+
+        try:
+            self.logging.log("正在连接设备...", self.name, logging.DEBUG)
+            conn = await self.adb.connect_tcp()
+            if not conn:
+                raise Exception("连接设备失败,可能原因:序列号填写错误/模拟器未开启/端口被占用")
+            await self.push_scripts()
+            # 异步初始化成功
+            type(self)._async_initialized_flags[name] = True
+        except Exception as e:
+            self._cleanup_instance(name)
+            raise
+
+    def _cleanup_instance(self, name):
+        """清理指定 name 的实例状态"""
+        type(self)._instances.pop(name, None)
+        type(self)._initialized_flags.pop(name, None)
+        type(self)._async_initialized_flags.pop(name, None)
 
     @staticmethod
     def __perform_screencap(controller: ScreenCap):
@@ -68,28 +105,28 @@ class DeviceUtils:
     def __perform_click(controller: Touch, x, y):
         controller.click(x, y)
 
-    def push_scripts(self):
+    async def push_scripts(self):
         """推送脚本文件到设备"""
         try:
-            self.adb.push(str(Path(__file__).resolve().parent.parent / "static/zoom_out.sh"), "/sdcard/zoom_out.sh")
+            await self.adb.push(str(Path(__file__).resolve().parent.parent / "static/zoom_out.sh"), "/sdcard/zoom_out.sh")
             self.logging.log("脚本文件推送成功", self.name, logging.DEBUG)
         except Exception as e:
             self.logging.log(f"推送脚本文件时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    def click_back(self):
+    async def click_back(self):
         """模拟点击返回键"""
         try:
-            self.adb.shell("input keyevent 4")
+            await self.adb.shell("input keyevent 4")
             self.logging.log("已点击返回键", self.name, logging.DEBUG)
         except Exception as e:
             self.logging.log(f"点击返回键时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    def zoom_out(self):
+    async def zoom_out(self):
         """执行缩放操作"""
         try:
-            self.adb.shell("sh /sdcard/zoom_out.sh")
+            await self.adb.shell("sh /sdcard/zoom_out.sh")
             self.logging.log("已执行缩放操作", self.name, logging.DEBUG)
         except Exception as e:
             self.logging.log(f"执行缩放操作时出错: {str(e)}", self.name, logging.ERROR)
@@ -133,7 +170,7 @@ class DeviceUtils:
             self.logging.log(f"点击坐标时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    def start_simulator(self):
+    async def start_simulator(self):
         try:
             if self.conf.simulator_path:
                 subprocess.Popen([self.conf.simulator_path, "-v", str(self.module.simulator_index)],
@@ -164,16 +201,16 @@ class DeviceUtils:
                     self.logging.log("应用未在前台运行,尝试重新打开应用", self.name, logging.INFO)
                     self.close_app()
                     await asyncio.sleep(3)
-                    self.launch_app()
+                    await self.launch_app()
             else:
-                self.launch_app()
+                await self.launch_app()
         except Exception as e:
             self.logging.log(f"检查应用运行状态时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    def launch_app(self):
+    async def launch_app(self):
         try:
-            self.adb.shell("am start -n com.stone3.ig/com.google.firebase.MessagingUnityPlayerActivity")
+            await self.adb.shell("am start -n com.stone3.ig/com.google.firebase.MessagingUnityPlayerActivity")
             self.logging.log("已启动应用", self.name, logging.INFO)
         except Exception as e:
             self.logging.log(f"启动应用时出错: {str(e)}", self.name, logging.ERROR)
@@ -187,10 +224,10 @@ class DeviceUtils:
             self.logging.log(f"关闭应用时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    def check_wm_size(self):
-        # 优化屏幕尺寸解析逻辑
+    async def check_wm_size(self):
         try:
-            output = self.adb.shell("wm size").strip()
+            resource = await self.adb.shell("wm size")
+            output = resource.strip()
             if output.startswith("Physical size:"):
                 parts = output.split()
                 if len(parts) >= 3:
@@ -201,4 +238,3 @@ class DeviceUtils:
             return None, None
         except Exception as e:
             self.logging.log(f"获取屏幕尺寸时出错: {str(e)}", self.name, logging.ERROR)
-

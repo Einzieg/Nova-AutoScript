@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -64,9 +65,9 @@ class AdbClient:
             if os.path.exists(os.path.join(path, "adb.exe")):
                 return os.path.join(path, "adb.exe")
 
-    def connect_tcp(self):
+    async def connect_tcp(self):
         """建立TCP连接"""
-        for attempt in range(self.max_retries + 1):
+        for attempt in range(self.max_retries):
             if self.connected:
                 self.logging.log("已连接，跳过重复连接", self.name, logging.DEBUG)
                 return True
@@ -75,7 +76,7 @@ class AdbClient:
 
             command = ["connect", f"{self.ip}:{self.port}"]
             try:
-                result = self._run_command(command)
+                result = await self._run_command(command)
                 result_lower = result.lower()
 
                 # 处理连接结果
@@ -87,12 +88,12 @@ class AdbClient:
                     self.logging.log(f"连接尝试 {attempt + 1}/{self.max_retries} 失败: {result.strip()}", self.name, logging.WARNING)
                     if attempt < self.max_retries:
                         self.logging.log(f"等待 {self.retry_delay} 秒后重试...", self.name, logging.INFO)
-                        time.sleep(self.retry_delay)
+                        await asyncio.sleep(self.retry_delay)
             except Exception as e:
                 self.logging.log(f"连接尝试 {attempt + 1}/{self.max_retries} 出错: {str(e)}", self.name, logging.ERROR)
                 if attempt < self.max_retries:
                     self.logging.log(f"等待 {self.retry_delay} 秒后重试...", self.name, logging.INFO)
-                    time.sleep(self.retry_delay)
+                    await asyncio.sleep(self.retry_delay)
 
         return False
 
@@ -107,7 +108,7 @@ class AdbClient:
             finally:
                 self.connected = False
 
-    def shell(self, command):
+    async def shell(self, command):
         """执行shell命令"""
         with self.lock:
             if not self.connected:
@@ -116,27 +117,27 @@ class AdbClient:
                     raise RuntimeError("无法连接设备")
             return self._run_command(["shell", command])
 
-    def pull(self, remote_path, local_path):
+    async def pull(self, remote_path, local_path):
         """拉取文件"""
         with self.lock:
             if not self.connected:
                 self.logging.log("尝试重新连接设备...", self.name, logging.WARNING)
                 if not self.connect_tcp():
                     raise RuntimeError("无法连接设备")
-            self._run_command(["pull", remote_path, local_path])
+            await self._run_command(["pull", remote_path, local_path])
             self.logging.log(f"文件已拉取: {remote_path} -> {local_path}", self.name, logging.DEBUG)
 
-    def push(self, local_path, remote_path):
+    async def push(self, local_path, remote_path):
         """推送文件"""
         with self.lock:
             if not self.connected:
                 self.logging.log("尝试重新连接设备...", self.name, logging.WARNING)
                 if not self.connect_tcp():
                     raise RuntimeError("无法连接设备")
-            self._run_command(["push", local_path, remote_path])
+            await self._run_command(["push", local_path, remote_path])
             self.logging.log(f"文件已推送: {local_path} -> {remote_path}", self.name, logging.DEBUG)
 
-    def _run_command(self, command):
+    async def _run_command(self, command):
         """执行底层ADB命令"""
         full_cmd = [self.adb_path, "-s", f"{self.ip}:{self.port}"] + command
         self.logging.log(f"执行命令: {' '.join(full_cmd)}", self.name, logging.DEBUG)

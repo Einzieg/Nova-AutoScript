@@ -12,10 +12,11 @@ dependencies = [
     "peewee==3.17.9",
     "rapidocr_onnxruntime==1.4.4",
     "rapidocr==2.0.6",
-    "mtc",
     "msc",
+    "mtc",
+    "pyinstaller>=6.13.0",
 ]
 
 [tool.uv.sources]
-mtc = { git = "https://github.com/NakanoSanku/mtc" }
 msc = { git = "https://github.com/NakanoSanku/msc" }
+mtc = { git = "https://github.com/NakanoSanku/mtc" }
