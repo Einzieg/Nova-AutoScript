@@ -4,7 +4,6 @@ import subprocess
 import time
 from pathlib import Path
 
-
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
@@ -54,9 +53,6 @@ class DeviceUtils:
         初始化DeviceUtils实例。
         :param name: 任务名称
         """
-        if self._initialized_flags[name]:
-            return
-
         self.conf = Config.get_or_create(id=1)[0]
         self.module = Module.get_or_none(Module.name == name)
         self.name = name
@@ -97,12 +93,12 @@ class DeviceUtils:
         type(self)._initialized_flags.pop(name, None)
         type(self)._async_initialized_flags.pop(name, None)
 
-    @staticmethod
-    def __perform_screencap(controller: ScreenCap):
+    def __perform_screencap(self, controller: ScreenCap):
+        self.logging.log(f"正在使用 {controller.__class__.__name__} 截图...", self.name, logging.DEBUG)
         return controller.screencap()
 
-    @staticmethod
-    def __perform_click(controller: Touch, x, y):
+    def __perform_click(self, controller: Touch, x, y):
+        self.logging.log(f"正在使用 {controller.__class__.__name__} 点击坐标 {x}, {y}...", self.name, logging.DEBUG)
         controller.click(x, y)
 
     async def push_scripts(self):

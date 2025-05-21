@@ -25,7 +25,7 @@ def log_init():
 
 def environ_init():
     # 初始化ADB
-    adb_path = Path("static/platform-tools")
+    adb_path = Path(__file__).resolve().parent / "static/platform-tools"
     os.environ["PATH"] = str(adb_path) + os.pathsep + os.environ["PATH"]
     try:
         subprocess.run(["adb", "version"], check=True)
