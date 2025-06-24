@@ -22,7 +22,7 @@ class GuiApp:
         self.main_tabs = None
         self.tab_buttons = {}  # 用于存储每个标签页的按钮引用
         self.settings_page = GuiAppSetting()
-        self.configuration_tabs = GuiAppConfigurationTabs()
+        self.configuration_tabs = GuiAppConfigurationTabs(self)
         self.log_manager = LogManager()
 
     def on_startup(self):
@@ -141,6 +141,9 @@ class GuiApp:
                         ui.button('添加', on_click=self.add_table)
 
     def start(self, tab_name):
+        if self.target_running[tab_name]:
+            ui.notify('任务运行中，请勿重复启动！', color='red')
+            return
         buttons = self.tab_buttons[tab_name]
         buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
         buttons['edit_btn'].classes(add='hidden')
@@ -152,6 +155,26 @@ class GuiApp:
         process = MainProcess(self, tab_name)
         self.target_running[tab_name] = True
         self.target_thread[tab_name] = asyncio.create_task(self.run_script(process))
+
+        # 保存 MainProcess 实例
+        if not hasattr(self, 'processes'):
+            self.processes = {}
+        self.processes[tab_name] = process
+
+    def quick_start(self, tab_name, task):
+        if self.target_running[tab_name]:
+            ui.notify('任务运行中，请勿重复启动！', color='red')
+            return
+        buttons = self.tab_buttons[tab_name]
+        buttons['start_btn'].classes(add='hidden')  # 隐藏启动按钮
+        buttons['edit_btn'].classes(add='hidden')
+        buttons['del_btn'].classes(add='hidden')
+        buttons['stop_btn'].classes(remove='hidden')  # 显示停止按钮
+
+        # 创建 MainProcess 实例并存储
+        process = MainProcess(self, tab_name)
+        self.target_running[tab_name] = True
+        self.target_thread[tab_name] = asyncio.create_task(self.quick_run_script(process, task))
 
         # 保存 MainProcess 实例
         if not hasattr(self, 'processes'):
@@ -180,7 +203,16 @@ class GuiApp:
             await process.run()
         except asyncio.CancelledError:
             # 处理任务取消的情况
-            print(f"Task for {process.target} was cancelled.")
+            logging.info(f"任务 {process.target} 已取消.")
+        finally:
+            self.target_running[process.target] = False
+
+    async def quick_run_script(self, process, task):
+        try:
+            await process.quick_run(task)
+        except asyncio.CancelledError:
+            # 处理任务取消的情况
+            logging.info(f"任务 {process.target} 已取消.")
         finally:
             self.target_running[process.target] = False
 

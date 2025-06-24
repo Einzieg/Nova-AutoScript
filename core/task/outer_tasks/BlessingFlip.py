@@ -7,6 +7,8 @@ import cv2
 from core.task.TaskBase import *
 from models.Template import Template
 
+TASK_NAME = "星辰探宝"
+
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 IN_GAME = Template(
@@ -46,8 +48,6 @@ CARDS = [
         template_path=ROOT_DIR / "static/novaimgs/CARD_GAME/v1/UNIT.png"
     ),
 ]
-
-TASK_NAME = "星辰探宝"
 
 
 class BlessingFlip(TaskBase):

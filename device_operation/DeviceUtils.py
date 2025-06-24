@@ -122,6 +122,7 @@ class DeviceUtils:
     async def zoom_out(self):
         """执行缩放操作"""
         try:
+            self.logging.log("开始执行缩小操作...", self.name, logging.DEBUG)
             await self.adb.shell("sh /sdcard/zoom_out.sh")
             self.logging.log("已执行缩放操作", self.name, logging.DEBUG)
         except Exception as e:

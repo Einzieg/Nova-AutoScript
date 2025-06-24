@@ -37,7 +37,7 @@ class Module(Model):
 
     hidden_switch = BlobField(default=False)  # 隐秘开关
 
-    hidden_policy = CharField(default="不使用能量道具")  # 隐秘策略
+    hidden_policy = CharField(default="不使用能量道具")  # 隐秘策略 (不使用能量道具/使用能量道具/使用GEC购买能量)
 
     hidden_times = IntegerField(null=True)  # 隐秘次数
 

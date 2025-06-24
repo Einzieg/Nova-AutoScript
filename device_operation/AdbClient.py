@@ -115,7 +115,7 @@ class AdbClient:
                 self.logging.log("尝试重新连接设备...", self.name, logging.WARNING)
                 if not self.connect_tcp():
                     raise RuntimeError("无法连接设备")
-            return self._run_command(["shell", command])
+            return await self._run_command(["shell", command])
 
     async def pull(self, remote_path, local_path):
         """拉取文件"""
@@ -140,31 +140,40 @@ class AdbClient:
     async def _run_command(self, command):
         """执行底层ADB命令"""
         full_cmd = [self.adb_path, "-s", f"{self.ip}:{self.port}"] + command
-        self.logging.log(f"执行命令: {' '.join(full_cmd)}", self.name, logging.DEBUG)
+        cmd_str = ' '.join(full_cmd)
+        self.logging.log(f"执行命令: {cmd_str}", self.name, logging.DEBUG)
 
         try:
             start_time = time.time()
-            result = subprocess.run(
-                full_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                encoding='utf-8',
-                errors='replace',
+
+            process = await asyncio.create_subprocess_exec(
+                *full_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=None,
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
+
+            try:
+                stdout, stderr = await process.communicate()
+            except asyncio.TimeoutError:
+                process.kill()
+                raise TimeoutError(f"命令执行超时: {cmd_str}")
+
             elapsed = time.time() - start_time
             self.logging.log(f"命令执行耗时: {elapsed:.2f}s", self.name, logging.DEBUG)
 
-            if result.returncode != 0:
-                error_msg = result.stderr.strip() or result.stdout.strip()
-                raise RuntimeError(f"命令执行失败（{result.returncode}）: {error_msg}")
+            stdout_decoded = (stdout or b'').decode('utf-8', errors='replace').strip()
+            stderr_decoded = (stderr or b'').decode('utf-8', errors='replace').strip()
 
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"命令执行异常: {str(e)}")
+            if process.returncode != 0:
+                error_msg = stderr_decoded or stdout_decoded
+                raise RuntimeError(f"命令执行失败（{process.returncode}）: {error_msg}")
+
+            return stdout_decoded
+
         except Exception as e:
-            raise RuntimeError(f"意外错误: {str(e)}")
+            raise RuntimeError(f"命令执行异常: {str(e)}")
 
     @staticmethod
     def get_device_id_by_port(port):

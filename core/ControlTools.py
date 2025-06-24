@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import random
+import time
 
 import cv2
 import numpy as np
@@ -28,7 +29,7 @@ class ControlTools:
             (1680, 250, 1920, 750)  # 右侧活动及快捷菜单
         ]
 
-    async def matching_one(self, template: Template, click=False, sleep=0.1):
+    async def matching_one(self, template: Template, click=False, sleep=0.3):
         image = self.device.get_screencap()
         cv_tmp = template.cv_tmp
 
@@ -60,7 +61,7 @@ class ControlTools:
             self.logging.log(f"{template.name} 匹配失败: {e}", self.target, logging.ERROR)
             return None
         finally:
-            if sleep > 0:
+            if sleep is not None and sleep > 0:
                 await asyncio.sleep(sleep)
 
     async def matching_all(self, template: Template):
@@ -115,23 +116,19 @@ class ControlTools:
                 new_coordinates.append([new_x, new_y])
         return new_coordinates
 
-    async def await_element_appear(self, template: Template, click=False, time_out=60):
-        times = 0
-        while times < time_out:
-            coordinate = await self.matching_one(template, click=click, sleep=1)
+    async def await_element_appear(self, template: Template, click=False, time_out=60, sleep=0.3):
+        start_time = time.time()
+        while time.time() - start_time < time_out:
+            coordinate = await self.matching_one(template, click=click, sleep=sleep)
             if coordinate:
-                if click:
-                    self.device.click(coordinate)
                 return True
-            times += 1
         return False
 
     async def await_element_disappear(self, template: Template, time_out=60):
-        times = 0
-        while times < time_out:
+        start_time = time.time()
+        while time.time() - start_time < time_out:
             if not await self.matching_one(template, click=False, sleep=1):
                 return True
-            times += 1
         return False
 
     @staticmethod

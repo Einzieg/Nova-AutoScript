@@ -60,7 +60,7 @@ class GuiAppSetting:
                           on_click=lambda: _save_settings()
                           ).props('color=primary')
                 ui.space()
-                ui.button('打开操作手册', on_click=lambda: webbrowser.open('https://github.com/NakanoSanku/msc'))
+                ui.button('打开操作手册', on_click=lambda: webbrowser.open('https://www.einzieg.site/'))
                 ui.button('退出', color='negative', on_click=self.on_close)
 
         def _save_settings():

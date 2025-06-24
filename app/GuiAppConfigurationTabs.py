@@ -2,10 +2,15 @@ import json
 
 from nicegui import ui
 
+from core.task.outer_tasks.BlessingFlip import BlessingFlip
+from core.task.test_tasks.Test2 import Test2
 from models.Module import Module
 
 
 class GuiAppConfigurationTabs:
+
+    def __init__(self, app):
+        self.app = app
 
     def create_configuration_tabs(self, tab_name):
         with ui.tabs().classes('w-full') as tabs:
@@ -190,4 +195,11 @@ class GuiAppConfigurationTabs:
                         ui.number()
                         ui.label('批次')
             with ui.tab_panel(quick):
-                ui.label('Quick tab')
+                ui.button('星辰探宝', on_click=lambda: self.quick_run(tab_name, BlessingFlip)).props('color=green')
+                ui.button('TEST2', on_click=lambda: self.quick_run(tab_name, Test2)).props('color=green')
+
+    def quick_run(self, tab_name, task):
+        if self.app.target_running[tab_name]:
+            ui.notify('任务正在运行中', color='red')
+            return
+        self.app.quick_start(tab_name, task)
