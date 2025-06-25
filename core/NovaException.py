@@ -23,3 +23,12 @@ class RadarFinishes(TaskFinishes):
 
     def __str__(self):
         return self.message
+
+
+class OrderFinishes(TaskFinishes):
+    def __init__(self, message="订单结束"):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
