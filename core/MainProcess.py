@@ -5,12 +5,14 @@ import traceback
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
 from core.task.daily_tasks.DailyTest import DailyTest
+from core.task.daily_tasks.Order import Order
 from core.task.daily_tasks.Radar import Radar
 from core.task.permanent_tasks.Permanent import Permanent
 
 from core.task.test_tasks.Test1 import Test1
 from core.task.test_tasks.Test2 import Test2
 from core.task.test_tasks.Test3 import Test3
+
 
 class MainProcess:
 
@@ -26,7 +28,7 @@ class MainProcess:
             # DailyTest(self.target),
             # BlessingFlip(self.target),
             # Permanent(self.target),
-            Radar(self.target),
+            Order(self.target),
             Test1(self.target)
         ]
         await self.start()

@@ -14,6 +14,11 @@ TO_SYSTEM = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/button/button_system.png"
 )
+MORE_SYSTEM = Template(
+    name="系统更多",
+    threshold=0.85,
+    template_path=ROOT_DIR / "static/novaimgs/button/button_more_system.png"
+)
 TO_TALENT = Template(
     name="天赋按钮",
     threshold=0.85,
@@ -26,18 +31,18 @@ TALENT_CHOICE = Template(
 )
 TALENT_RC = Template(
     name="增加RC",
-    threshold=0.85
+    threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/talent/increase_rc.png"
 )
 TALENT_TIME = Template(
     name="减少时间",
-    threshold=0.85
+    threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/talent/reduce_time.png"
 )
 CONFIRM_TALENT = Template(
     name="天赋确认",
-    threshold=0.85
-    template_path=ROOT_DIR / "static/novaimgs/talent/confirm_talent.png"
+    threshold=0.85,
+    template_path=ROOT_DIR / "static/novaimgs/talent/confirm_replacement_talent.png"
 )
 
 # 通过牌子提交订单所需模版
@@ -140,7 +145,7 @@ FACTORY_EMPTY = Template(
 CLOSE_FACTORY = Template(
     name="退出工厂",
     threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/button/button_close1.png"
+    template_path=ROOT_DIR / "static/novaimgs/button/btn_close1.png"
 )
 SPEEDUP_DEPLETED = Template(
     name="加速耗尽",
@@ -164,6 +169,7 @@ BEACON_CONFIRM = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/confirm_delivery.png"
 )
+
 
 class Order(TaskBase):
     def __init__(self, target):
@@ -192,30 +198,30 @@ class Order(TaskBase):
                 for i in range(order_times):
                     await self.order_process()
             else:
-                while i in range(100): # 100 orders max per day
+                for i in range(100):  # 100 orders max per day
                     await self.return_home()
                     await self.order_process()
         except OrderFinishes:
             self._update_status(SUCCESS)
             return
-    
+
     async def order_process(self):
         # 使用超空间信标、不使用超空间信标、使用GEC购买信标
         # 使用订单电路板、使用制造加速
         # 先确定是订单电路板还是制造加速：
         # 如果是订单电路板，则直接进入订单页面；否则，进入右侧系统页面操作
-        
+
         # 第一步：切换天赋至 +RC
-        self.change_talent(TALENT_RC)
+        await self.change_talent(TALENT_RC)
 
         # 第二步： 进行订单（生产）及提交 (需要手动确认加速足够多？)
-        if self.order_policy == "使用订单电路板": #需要提前计算好PCBA的数量？
+        if self.order_policy == "使用订单电路板":  # 需要提前计算好PCBA的数量？
             await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
             await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
             await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
             if not await self.control.await_element_appear(TO_HOME, click=True, time_out=3):
-                raise OrderFinishes("PCBA道具已用完,订单结束") # 如果正好为0
-            
+                raise OrderFinishes("PCBA道具已用完,订单结束")  # 如果正好为0
+
         if self.order_policy == "使用制造加速":
             if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
                 if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
@@ -226,7 +232,7 @@ class Order(TaskBase):
                     while True:
                         await self.control.await_element_appear(SMART_PRODUCTION, click=True, time_out=2)
                         if await self.control.await_element_appear(FACTORY_EMPTY, click=True, time_out=2):
-                            break # 智能生产后依然工厂为空闲，判定为无需继续生产
+                            break  # 智能生产后依然工厂为空闲，判定为无需继续生产
 
                         await self.control.await_element_appear(SPEEDUP_PRODUCTION, click=True, time_out=2)
                         if await self.control.await_element_appear(SPEEDUP_DEPLETED, click=False, time_out=2):
@@ -246,13 +252,13 @@ class Order(TaskBase):
                 raise OrderFinishes("无法找到系统界面,订单结束")
 
         # 第三步： 切换天赋至 -Time
-        self.change_talent(TALENT_TIME)
+        await self.change_talent(TALENT_TIME)
 
         # 第四步： 获取新订单 （需要确认加速获取订单的规则）
         await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
         if not await self.control.await_element_appear(PCBA_DELIVERY, click=False, time_out=2):
             if not (await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3) or await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3)):
-                raise OrderFinishes("PCBA或加速道具已用完,订单结束") # 如果PCBA只够提交几个订单
+                raise OrderFinishes("PCBA或加速道具已用完,订单结束")  # 如果PCBA只够提交几个订单
             if self.order_hasten_policy == "使用超空间信标":
                 await self.control.await_element_appear(BEACON_ORDER, click=True, time_out=3)
                 await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
@@ -261,7 +267,9 @@ class Order(TaskBase):
 
     async def change_talent(self, mode):
         await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
+        await self.control.await_element_appear(MORE_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(TO_TALENT, click=True, time_out=3)
         await self.control.await_element_appear(TALENT_CHOICE, click=True, time_out=3)
         await self.control.await_element_appear(mode, click=True, time_out=3)
-        await self.control.await_element_appear(CONFIRM_TALENT, click=True, time_out=3)
+        await self.control.await_element_appear(CONFIRM_TALENT, click=True, time_out=3, sleep=1)
+        await self.control.await_element_appear(TO_HOME, click=True, time_out=3, sleep=1)
