@@ -32,3 +32,12 @@ class OrderFinishes(TaskFinishes):
 
     def __str__(self):
         return self.message
+    
+
+class PermPirateFinishes(TaskFinishes):
+    def __init__(self, message="常驻海盗结束"):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message

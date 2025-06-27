@@ -83,9 +83,15 @@ class Templates:
             forbidden=True,
         ),
         Template(
-            name="小残骸",
+            name="合金残骸",
             threshold=0.75,
             template_path=ROOT_DIR / "static/novaimgs/acquisition/alloy_wreckage.png",
+            forbidden=True,
+        ),
+        Template(
+            name="水晶残骸",
+            threshold=0.75,
+            template_path=ROOT_DIR / "static/novaimgs/acquisition/crystal_wreckage.png",
             forbidden=True,
         ),
     ]
@@ -99,7 +105,7 @@ class Templates:
         threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/identify_in/in_menu.png",
     )
-    NONE_AVAILABLE = Template(
+    NO_WORKSHIPS = Template(
         name="无可用工程船",
         threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/acquisition/none_available.png",

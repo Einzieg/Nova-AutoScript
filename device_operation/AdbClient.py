@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import time
+import sys
 from threading import Lock
 
 from core.LogManager import LogManager
@@ -145,14 +146,21 @@ class AdbClient:
 
         try:
             start_time = time.time()
-
-            process = await asyncio.create_subprocess_exec(
-                *full_cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                stdin=None,
-                creationflags=subprocess.CREATE_NO_WINDOW
-            )
+            if sys.platform != 'darwin':
+                process = await asyncio.create_subprocess_exec(
+                    *full_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=None,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+            else:
+                process = await asyncio.create_subprocess_exec(
+                    *full_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    stdin=None
+                )
 
             try:
                 stdout, stderr = await process.communicate()

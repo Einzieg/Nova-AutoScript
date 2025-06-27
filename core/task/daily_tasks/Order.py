@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from core.NovaException import OrderFinishes
-from core.load_templates import Template
+from core.LoadTemplates import Template
 from core.task.TaskBase import *
 
 TASK_NAME = "订单"
@@ -181,7 +181,7 @@ class Order(TaskBase):
 
     async def prepare(self):
         await super().prepare()
-        self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
+        self.logging.log(f"{TASK_NAME} 开始执行: policy={self.order_policy} hasten_policy={self.order_hasten_policy} 次数={self.module.order_times} >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
@@ -210,19 +210,21 @@ class Order(TaskBase):
         # 使用订单电路板、使用制造加速
         # 先确定是订单电路板还是制造加速：
         # 如果是订单电路板，则直接进入订单页面；否则，进入右侧系统页面操作
-
+        self.logging.log(f"{TASK_NAME} Order Process, Order Policy:{self.order_policy}, Order Hasten Policy:{self.order_hasten_policy}", self.target, logging.DEBUG)
         # 第一步：切换天赋至 +RC
         await self.change_talent(TALENT_RC)
 
         # 第二步： 进行订单（生产）及提交 (需要手动确认加速足够多？)
-        if self.order_policy == "使用订单电路板":  # 需要提前计算好PCBA的数量？
+        if '订单电路板' in self.order_hasten_policy:  # 需要提前计算好PCBA的数量？
+            self.logging.log(f"{TASK_NAME} 使用电路板 <<<", self.target, logging.DEBUG)
             await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
             await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
             await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
             if not await self.control.await_element_appear(TO_HOME, click=True, time_out=3):
                 raise OrderFinishes("PCBA道具已用完,订单结束")  # 如果正好为0
 
-        if self.order_policy == "使用制造加速":
+        if '使用制造加速' in self.order_hasten_policy:
+            self.logging.log(f"{TASK_NAME} 使用制造加速 <<<", self.target, logging.DEBUG)
             if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
                 if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
                     await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
@@ -250,22 +252,29 @@ class Order(TaskBase):
                         raise OrderFinishes("无法找到系统界面,订单结束")
             else:
                 raise OrderFinishes("无法找到系统界面,订单结束")
+        else:
+            self.logging.log(f"{TASK_NAME} 不是使用制造加速 <<<", self.target, logging.DEBUG)
+
 
         # 第三步： 切换天赋至 -Time
         await self.change_talent(TALENT_TIME)
 
         # 第四步： 获取新订单 （需要确认加速获取订单的规则）
-        await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
+        self.logging.log(f"{TASK_NAME} 获取新订单 >>>", self.target, logging.DEBUG)
+        await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
+        await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
+        #await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
         if not await self.control.await_element_appear(PCBA_DELIVERY, click=False, time_out=2):
             if not (await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3) or await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3)):
                 raise OrderFinishes("PCBA或加速道具已用完,订单结束")  # 如果PCBA只够提交几个订单
-            if self.order_hasten_policy == "使用超空间信标":
+            if self.order_policy == '使用超空间信标':
                 await self.control.await_element_appear(BEACON_ORDER, click=True, time_out=3)
                 await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
             # TODO: if self.order_hasten_policy == "使用GEC购买信标":
             await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
 
     async def change_talent(self, mode):
+        self.logging.log(f"{TASK_NAME} 修改天赋至{mode} <<<", self.target, logging.DEBUG)
         await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(MORE_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(TO_TALENT, click=True, time_out=3)

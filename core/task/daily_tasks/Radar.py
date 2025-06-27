@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from core.NovaException import RadarFinishes
-from core.load_templates import Template
+from core.LoadTemplates import Template
 from core.task.TaskBase import *
 
 TASK_NAME = "雷达"

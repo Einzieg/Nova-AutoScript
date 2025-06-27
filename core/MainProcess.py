@@ -7,6 +7,7 @@ from core.NovaException import TaskFinishes
 from core.task.daily_tasks.DailyTest import DailyTest
 from core.task.daily_tasks.Order import Order
 from core.task.daily_tasks.Radar import Radar
+from core.task.daily_tasks.Wreckage import Wreckage
 from core.task.permanent_tasks.Permanent import Permanent
 
 from core.task.test_tasks.Test1 import Test1
@@ -29,7 +30,10 @@ class MainProcess:
             # BlessingFlip(self.target),
             # Permanent(self.target),
             Order(self.target),
-            Test1(self.target)
+            
+            # Wreckage(self.target)
+                
+            # Test1(self.target)
         ]
         await self.start()
 

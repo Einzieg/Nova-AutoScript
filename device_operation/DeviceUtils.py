@@ -2,17 +2,21 @@ import asyncio
 import logging
 import subprocess
 import time
+import sys
+
 from pathlib import Path
 
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
-from msc.mumu import MuMuCap
+if sys.platform != 'darwin':
+    from msc.mumu import MuMuCap
 from msc.screencap import ScreenCap
 from mtc.adb import ADBTouch
 from mtc.maatouch import MaaTouch
 from mtc.minitouch import MiniTouch
-from mtc.mumu import MuMuTouch
+if sys.platform != 'darwin':
+    from mtc.mumu import MuMuTouch
 from mtc.touch import Touch
 
 from core.LogManager import LogManager
@@ -22,18 +26,19 @@ from models import Config, Module
 
 class DeviceUtils:
     CAP_TOOLS = {
-        'MuMu': MuMuCap,
-        'ADB': ADBCap,
-        'MiniCap': MiniCap,
-        'DroidCast': DroidCast
-    }
+            'ADB': ADBCap,
+            'MiniCap': MiniCap,
+            'DroidCast': DroidCast
+        }
     TOUCH_TOOLS = {
-        'MuMu': MuMuTouch,
-        'ADB': ADBTouch,
-        'MiniTouch': MiniTouch,
-        'MaaTouch': MaaTouch
-    }
-
+            'ADB': ADBTouch,
+            'MiniTouch': MiniTouch,
+            'MaaTouch': MaaTouch
+        }
+    if sys.platform != 'darwin':
+        CAP_TOOLS['MuMu'] = MuMuCap
+        TOUCH_TOOLS['MuMu'] = MuMuTouch
+        
     _instances = {}
     _initialized_flags = {}
     _async_initialized_flags = {}

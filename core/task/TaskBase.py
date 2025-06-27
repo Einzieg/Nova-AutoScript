@@ -1,10 +1,11 @@
 import asyncio
 import logging
+import time
 
 from core.ControlTools import ControlTools
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
-from core.load_templates import Templates
+from core.LoadTemplates import Templates
 from device_operation.DeviceUtils import DeviceUtils
 from models.Module import Module
 
@@ -82,7 +83,7 @@ class TaskBase:
             await self.device.click_back()
 
     async def none_available_check(self):
-        if await self.control.matching_one(Templates.NONE_AVAILABLE):
+        if await self.control.matching_one(Templates.NO_WORKSHIPS):
             await self.device.click_back()
 
     async def attack(self):
@@ -96,6 +97,7 @@ class TaskBase:
         if await self.control.await_element_appear(Templates.CONFIRM_ATTACK, click=True, time_out=0.5):
             await self.combat_checks()
             if self.revenge:
+                await self.recall_fleets()
                 self.logging.log("等待复仇", self.target)
                 await self.combat_checks()
                 self.revenge = False
@@ -107,3 +109,86 @@ class TaskBase:
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
             if await self.control.await_element_disappear(Templates.IN_BATTLE, time_out=120):
                 self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
+
+    async def recall_fleets(self):
+        await self.control.await_element_appear(Templates.MENUS, click=True, time_out=2)
+        await self.control.await_element_appear(Templates.FLEETS_MENU, click=True, time_out=3, sleep=2)
+        coordinate = await self.control.matching_one(Templates.HOVER_RECALL, click=False, offset_y=-1000)
+        await self.control.await_element_appear(Templates.HOVER_RECALL, click=True, time_out=3)
+        self.device.click(coordinate)
+        time.sleep(1)
+
+    # async def collect_wreckage(self):
+    #     self.logging.log("开始采集残骸>>>", self.target, logging.DEBUG)
+    #     while True:
+    #         for wreckage in Templates.WRECKAGE_LIST:
+    #             coords = await self.control.move_coordinates(wreckage)
+    #             coordinates.append(coords)
+    #         self.logging.log(f"got coordinates: {coordinates}", self.target, logging.DEBUG)
+    #         for coordinate in coordinates:
+    #             self.control.device.click(coordinate)
+    #             await self.control.await_element_appear(Templates.COLLECT, click=True, time_out=3)
+    #             if await self.control.await_element_appear(Templates.NO_WORKSHIPS, click=False, time_out=2):
+    #                 await self.control.await_element_appear(Templates.CONFIRM_RELOGIN, click=True, time_out=2)
+    #                 self.logging.log("采集残骸结束<<<", self.target, logging.DEBUG)
+    #                 return
+
+    async def collect_wreckage(self):
+        """Collects wreckage by iterating through predefined templates."""
+        self.logging.log("开始采集残骸>>>", self.target, logging.DEBUG)
+        coordinates = []  # Initialize coordinates list
+        total_retry = 8
+        try:
+            wreckage_attempted = 0
+            while True:
+                # Phase 1: Find all wreckage locations
+                for wreckage in Templates.WRECKAGE_LIST:
+                    coords = await self.control.move_coordinates(wreckage)
+                    if coords:  # Only append if coordinates were found
+                        for coord in coords:
+                            coordinates.append(coord)
+                
+    
+                self.logging.log(f"Found {len(coordinates)} wreckage coordinates: {coordinates}", 
+                            self.target, logging.DEBUG)
+                
+                if not coordinates:  # No wreckage found
+                    self.logging.log("未发现残骸<<<", self.target, logging.DEBUG)
+                    return
+                
+                # Phase 2: Process each wreckage
+                for coordinate in coordinates.copy():  # Use copy to avoid modifying during iteration
+                    try:
+                        self.control.device.click(coordinate)
+                        wreckage_attempted+=1
+                        # Attempt collection
+                        if await self.control.await_element_appear(Templates.COLLECT, click=True, time_out=3):
+                            coordinates.remove(coordinate)  # Successfully processed
+                            continue
+
+                        if await self.control.await_element_appear(Templates.RECALL, time_out=2):
+                            coordinates.remove(coordinate)
+                            continue
+                        
+                        # Check for no workships condition
+                        if await self.control.await_element_appear(Templates.NO_WORKSHIPS, click=False, time_out=2):
+                            await self.control.await_element_appear(Templates.CONFIRM_RELOGIN, click=True, time_out=2)
+                            self.logging.log("采集残骸结束: 没有工作舰<<<", self.target, logging.DEBUG)
+                            return
+                            
+                    except Exception as e:
+                        self.logging.log(f"处理残骸时出错 {coordinate}: {str(e)}", self.target, logging.ERROR)
+                        continue
+                
+                # Exit condition when all wreckage processed
+                if not coordinates:
+                    self.logging.log("所有残骸采集完成<<<", self.target, logging.DEBUG)
+                    return
+                if wreckage_attempted >= total_retry:
+                    self.logging.log("已尝试8次残骸采集<<<", self.target, logging.DEBUG)
+                    return
+                    
+        except Exception as e:
+            self.logging.log(f"采集残骸过程中发生严重错误: {str(e)}", self.target, logging.ERROR)
+        finally:
+            self.logging.log("采集残骸结束<<<", self.target, logging.DEBUG)
