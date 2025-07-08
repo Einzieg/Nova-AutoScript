@@ -49,17 +49,3 @@ class MailClient:
             logging.error('Error: ' + str(e))
             return False
 
-# if __name__ == '__main__':
-#     host = 'smtp.qq.com'
-#     port = 465
-#     user = '1936343575@qq.com'
-#     password = 'rmteqfcaejukehac'
-#     sender = '1936343575@qq.com'
-#     receiver = '18350229270@139.com;'
-#     subject = '测试邮件'
-#     content = '这是一封测试邮件，请勿回复。'
-#     files = ["C:/Users/19363/Desktop/需求文档/安全报审/附件1：中国移动政企领域能力解耦标准（试行版）.pdf"]
-#     mail_client = MailClient(mail_host=host, mail_port=port, mail_user=user, mail_pass=password,
-#                              mail_sender=sender, mail_receiver=receiver, mail_subject=subject, mail_content=content,
-#                              mail_files=files)
-#     print(mail_client.send_mail())
