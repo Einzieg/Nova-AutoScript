@@ -1,11 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
+from pathlib import Path
+
+import msc
+import mtc
+import nicegui
+
+sys.setrecursionlimit(5000)
 
 a = Analysis(
     ['main.py'],
-    pathex=[],
+    pathex=[r'C:\Users\Einzieg\PycharmProjects\NovaAH\.venv'],
     binaries=[],
-    datas=[('C:\\Environment\\Python311\\Lib\\site-packages\\nicegui', 'nicegui')],
-    hiddenimports=['nicegui'],
+    datas=[(f'{Path(nicegui.__file__).parent}', 'nicegui'),
+           (f'{Path(msc.__file__).parent}', 'msc'),
+           (f'{Path(mtc.__file__).parent}', 'mtc'),
+           ("static", "static")],
+    hiddenimports=['nicegui', 'cv2', 'msc', 'mtc'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -15,17 +26,14 @@ a = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data)
+pyz = PYZ(a.pure, a.zipped_data, gen_pyc=True)
 
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
-    [],
     name='NovaAH',
-    icon='',
-    debug=True,
+    icon='static/nova-autoScript.ico',
+    debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
@@ -37,4 +45,15 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='NovaAutoScript-0.12.0-Bata',
 )

@@ -2,9 +2,11 @@ import logging
 import os
 import subprocess
 from datetime import datetime
+from pathlib import Path
+
 from app.GuiApp import GuiApp
-from device_operation.SQLInitialization import SQLInitialization
-from path_util import resource_path
+from database.db_session import init_database
+
 
 
 def log_init():
@@ -21,23 +23,25 @@ def log_init():
     root_logger.addHandler(file_handler)
 
 
-if __name__ == "__main__":
-
-    # 初始化日志
-    log_init()
-
+def environ_init():
     # 初始化ADB
-    adb_path = resource_path("static/platform-tools")
-    os.environ["PATH"] = adb_path + os.pathsep + os.environ["PATH"]
+    adb_path = Path(__file__).resolve().parent / "static/platform-tools"
+    os.environ["PATH"] = str(adb_path) + os.pathsep + os.environ["PATH"]
     try:
         subprocess.run(["adb", "version"], check=True)
         logging.info(f"ADB 环境设置成功 {adb_path}")
     except subprocess.CalledProcessError as e:
         logging.error(f"ADB 环境变量设置失败: {e}")
 
+
+if __name__ == "__main__":
+    # 初始化日志
+    log_init()
+    # 初始化环境变量
+    environ_init()
     # 初始化数据库
-    sql_init = SQLInitialization()
-    # sql_init.initialization()
+    init_database()
+
 
 if __name__ in {"__main__", "__mp_main__"}:
     application = GuiApp()
