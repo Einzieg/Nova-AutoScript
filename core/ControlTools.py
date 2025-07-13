@@ -124,10 +124,10 @@ class ControlTools:
                 return True
         return False
 
-    async def await_element_disappear(self, template: Template, time_out=60):
+    async def await_element_disappear(self, template: Template, time_out=60, sleep=1):
         start_time = time.time()
         while time.time() - start_time < time_out:
-            if not await self.matching_one(template, click=False, sleep=1):
+            if not await self.matching_one(template, click=False, sleep=sleep):
                 return True
         return False
 

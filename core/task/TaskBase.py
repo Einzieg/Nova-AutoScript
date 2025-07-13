@@ -107,7 +107,7 @@ class TaskBase:
         if await self.control.await_element_appear(Templates.IN_BATTLE, time_out=180):
             self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
-            if await self.control.await_element_disappear(Templates.IN_BATTLE, time_out=120):
+            if await self.control.await_element_disappear(Templates.IN_BATTLE, time_out=120, sleep=3):
                 self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
 
     async def recall_fleets(self):
@@ -147,20 +147,18 @@ class TaskBase:
                     if coords:  # Only append if coordinates were found
                         for coord in coords:
                             coordinates.append(coord)
-                
-    
-                self.logging.log(f"Found {len(coordinates)} wreckage coordinates: {coordinates}", 
-                            self.target, logging.DEBUG)
-                
+
+                self.logging.log(f"Found {len(coordinates)} wreckage coordinates: {coordinates}", self.target, logging.DEBUG)
+
                 if not coordinates:  # No wreckage found
                     self.logging.log("未发现残骸<<<", self.target, logging.DEBUG)
                     return
-                
+
                 # Phase 2: Process each wreckage
                 for coordinate in coordinates.copy():  # Use copy to avoid modifying during iteration
                     try:
                         self.control.device.click(coordinate)
-                        wreckage_attempted+=1
+                        wreckage_attempted += 1
                         # Attempt collection
                         if await self.control.await_element_appear(Templates.COLLECT, click=True, time_out=3):
                             coordinates.remove(coordinate)  # Successfully processed
@@ -169,17 +167,17 @@ class TaskBase:
                         if await self.control.await_element_appear(Templates.RECALL, time_out=2):
                             coordinates.remove(coordinate)
                             continue
-                        
+
                         # Check for no workships condition
                         if await self.control.await_element_appear(Templates.NO_WORKSHIPS, click=False, time_out=2):
                             await self.control.await_element_appear(Templates.CONFIRM_RELOGIN, click=True, time_out=2)
                             self.logging.log("采集残骸结束: 没有工作舰<<<", self.target, logging.DEBUG)
                             return
-                            
+
                     except Exception as e:
                         self.logging.log(f"处理残骸时出错 {coordinate}: {str(e)}", self.target, logging.ERROR)
                         continue
-                
+
                 # Exit condition when all wreckage processed
                 if not coordinates:
                     self.logging.log("所有残骸采集完成<<<", self.target, logging.DEBUG)
@@ -187,7 +185,7 @@ class TaskBase:
                 if wreckage_attempted >= total_retry:
                     self.logging.log("已尝试8次残骸采集<<<", self.target, logging.DEBUG)
                     return
-                    
+
         except Exception as e:
             self.logging.log(f"采集残骸过程中发生严重错误: {str(e)}", self.target, logging.ERROR)
         finally:

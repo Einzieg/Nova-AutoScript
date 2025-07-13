@@ -164,9 +164,9 @@ class AdbClient:
 
             try:
                 stdout, stderr = await process.communicate()
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError as e:
                 process.kill()
-                raise TimeoutError(f"命令执行超时: {cmd_str}")
+                raise TimeoutError(f"命令执行超时: {e}")
 
             elapsed = time.time() - start_time
             self.logging.log(f"命令执行耗时: {elapsed:.2f}s", self.name, logging.DEBUG)
