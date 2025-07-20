@@ -24,7 +24,7 @@ def perform_click(controller: Touch, x, y):
 
 def matching_one():
     img = perform_screencap(MuMuCap(0))
-    temp = cv2.imread(r"../static/novaimgs/talent/confirm_replacement_talent.png")
+    temp = cv2.imread(r"../static/novaimgs/alliance/donation/donate.png")
     # temp = cv2.imread("screencap.png")
 
     result = cv2.matchTemplate(img, temp, cv2.TM_CCOEFF_NORMED)
