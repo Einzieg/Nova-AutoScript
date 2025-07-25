@@ -116,7 +116,8 @@ class TaskBase:
         coordinate = await self.control.matching_one(Templates.HOVER_RECALL, click=False, offset_y=-1000)
         await self.control.await_element_appear(Templates.HOVER_RECALL, click=True, time_out=3)
         self.device.click(coordinate)
-        time.sleep(1)
+        await self.device.click_back()
+        await asyncio.sleep(1)
 
     # async def collect_wreckage(self):
     #     self.logging.log("开始采集残骸>>>", self.target, logging.DEBUG)
