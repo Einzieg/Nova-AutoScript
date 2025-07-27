@@ -111,11 +111,10 @@ class TaskBase:
                 self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
 
     async def recall_fleets(self):
-        await self.control.await_element_appear(Templates.MENUS, click=True, time_out=2)
+        for template in Templates.MENUS:
+            await self.control.await_element_appear(template, click=True, time_out=2)
         await self.control.await_element_appear(Templates.FLEETS_MENU, click=True, time_out=3, sleep=2)
-        coordinate = await self.control.matching_one(Templates.HOVER_RECALL, click=False, offset_y=-1000)
-        await self.control.await_element_appear(Templates.HOVER_RECALL, click=True, time_out=3)
-        self.device.click(coordinate)
+        await self.control.await_element_appear(Templates.HOVER_RECALL, click=True, time_out=2)
         await self.device.click_back()
         await asyncio.sleep(1)
 
