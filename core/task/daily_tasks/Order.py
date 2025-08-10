@@ -93,11 +93,11 @@ ORDER_IS_HERE = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/order_arrived.png"
 )
-ORDER_ONTHEWAY = Template(
-    name="订单未到",
-    threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/order/order_ontheway.png"
-)
+# ORDER_ONTHEWAY = Template(
+#     name="订单未到",
+#     threshold=0.85,
+#     template_path=ROOT_DIR / "static/novaimgs/order/order_ontheway.png"
+# )
 QUICK_DELIVER = Template(
     name="快速提交",
     threshold=0.85,
@@ -183,6 +183,8 @@ class Order(TaskBase):
         self.target = target
         self.order_policy = self.module.order_policy
         self.order_hasten_policy = self.module.order_hasten_policy
+        from device_operation.RapidOcr import RapidOcr
+        self.ocr = RapidOcr()
 
     async def prepare(self):
         await super().prepare()
@@ -225,12 +227,13 @@ class Order(TaskBase):
             await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
             await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
             await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
-            if not await self.control.await_element_appear(TO_HOME, click=True, time_out=3):
+            if not await self.control.await_element_appear(TO_HOME, click=True, time_out=1):
                 raise OrderFinishes("PCBA道具已用完,订单结束")  # 如果正好为0
+            await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3)
 
         if '使用制造加速' in self.order_hasten_policy:
             self.logging.log(f"{TASK_NAME} 使用制造加速 <<<", self.target, logging.DEBUG)
-            if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
+            if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=1) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=1):
                 if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
                     await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
                     if await self.control.await_element_appear(PRODUCE_ORDER, click=True, time_out=2):
@@ -250,7 +253,8 @@ class Order(TaskBase):
                             await self.control.await_element_appear(QHOUR_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y)
                         await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
                         # 提交剩余订单
-                        if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
+                        if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True,
+                                                                                                                                                            time_out=2):
                             if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
                                 await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
                                 if not await self.control.await_element_appear(PRODUCE_ORDER, click=False, time_out=2):
@@ -265,13 +269,12 @@ class Order(TaskBase):
                     #     self.logging.log(f"{TASK_NAME} 订单已经提交，结束提交, 回到主界面 <<<", self.target, logging.DEBUG)
                     #     await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
                 else:
-                    await self.control.await_element_appear(ORDER_ONTHEWAY, click=True, time_out=3)
+                    # await self.control.await_element_appear(ORDER_ONTHEWAY, click=True, time_out=3)
                     await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
             else:
                 raise OrderFinishes("无法找到系统界面,订单结束")
         else:
             self.logging.log(f"{TASK_NAME} 不是使用制造加速 <<<", self.target, logging.DEBUG)
-
 
         # 第三步： 切换天赋至 -Time
         await self.change_talent(TALENT_TIME)
@@ -295,8 +298,7 @@ class Order(TaskBase):
                     self.logging.log(f"{TASK_NAME} {self.order_policy} >>>", self.target, logging.DEBUG)
 
         await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
-            # TODO: if self.order_hasten_policy == "使用GEC购买信标":
-            
+        # TODO: if self.order_hasten_policy == "使用GEC购买信标":
 
     async def change_talent(self, mode):
         self.logging.log(f"{TASK_NAME} 修改天赋至{mode} <<<", self.target, logging.DEBUG)

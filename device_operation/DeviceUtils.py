@@ -1,20 +1,21 @@
 import asyncio
 import logging
 import subprocess
-import time
 import sys
-
+import time
 from pathlib import Path
 
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
+
 if sys.platform != 'darwin':
     from msc.mumu import MuMuCap
 from msc.screencap import ScreenCap
 from mtc.adb import ADBTouch
 from mtc.maatouch import MaaTouch
 from mtc.minitouch import MiniTouch
+
 if sys.platform != 'darwin':
     from mtc.mumu import MuMuTouch
 from mtc.touch import Touch
@@ -26,19 +27,19 @@ from models import Config, Module
 
 class DeviceUtils:
     CAP_TOOLS = {
-            'ADB': ADBCap,
-            'MiniCap': MiniCap,
-            'DroidCast': DroidCast
-        }
+        'ADB': ADBCap,
+        'MiniCap': MiniCap,
+        'DroidCast': DroidCast
+    }
     TOUCH_TOOLS = {
-            'ADB': ADBTouch,
-            'MiniTouch': MiniTouch,
-            'MaaTouch': MaaTouch
-        }
+        'ADB': ADBTouch,
+        'MiniTouch': MiniTouch,
+        'MaaTouch': MaaTouch
+    }
     if sys.platform != 'darwin':
         CAP_TOOLS['MuMu'] = MuMuCap
         TOUCH_TOOLS['MuMu'] = MuMuTouch
-        
+
     _instances = {}
     _initialized_flags = {}
     _async_initialized_flags = {}
@@ -102,9 +103,13 @@ class DeviceUtils:
         self.logging.log(f"正在使用 {controller.__class__.__name__} 截图...", self.name, logging.DEBUG)
         return controller.screencap()
 
-    def __perform_click(self, controller: Touch, x, y):
+    async def __perform_click(self, controller: Touch, x, y):
         self.logging.log(f"正在使用 {controller.__class__.__name__} 点击坐标 {x}, {y}...", self.name, logging.DEBUG)
-        controller.click(x, y)
+        await controller.click(x, y)
+
+    async def __perform_swipe(self, controller: Touch, points: list, duration: int):
+        self.logging.log(f"正在使用 {controller.__class__.__name__} 滑动...", self.name, logging.DEBUG)
+        await controller.swipe(points, duration)
 
     async def push_scripts(self):
         """推送脚本文件到设备"""
@@ -157,7 +162,7 @@ class DeviceUtils:
                     self.logging.log(f"{self.conf.cap_tool} 截图失败: {str(e)}", self.name, logging.ERROR)
                     raise e
 
-    def click(self, coordinate):
+    async def click(self, coordinate):
         x, y = coordinate
         try:
             tool_class = self.TOUCH_TOOLS.get(self.conf.touch_tool)
@@ -167,9 +172,23 @@ class DeviceUtils:
                 controller = tool_class(instance_index=self.module.simulator_index)
             else:
                 controller = tool_class(serial=f'127.0.0.1:{self.port}')
-            self.__perform_click(controller, x, y)
+            await self.__perform_click(controller, x, y)
         except Exception as e:
             self.logging.log(f"点击坐标时出错: {str(e)}", self.name, logging.ERROR)
+            raise
+
+    async def swipe(self, points: list, duration: int):
+        try:
+            tool_class = self.TOUCH_TOOLS.get(self.conf.touch_tool)
+            if not tool_class:
+                raise ValueError("未知的点击工具")
+            if tool_class.__name__ == 'MuMuTouch':
+                controller = tool_class(instance_index=self.module.simulator_index)
+            else:
+                controller = tool_class(serial=f'127.0.0.1:{self.port}')
+            await self.__perform_swipe(controller, points, duration)
+        except Exception as e:
+            self.logging.log(f"滑动时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
     async def start_simulator(self):
@@ -240,3 +259,8 @@ class DeviceUtils:
             return None, None
         except Exception as e:
             self.logging.log(f"获取屏幕尺寸时出错: {str(e)}", self.name, logging.ERROR)
+
+
+if __name__ == '__main__':
+    device = DeviceUtils("6")
+    asyncio.run(device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 500))

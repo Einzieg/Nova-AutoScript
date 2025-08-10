@@ -1,5 +1,3 @@
-import asyncio
-import logging
 from pathlib import Path
 
 import cv2
@@ -93,9 +91,9 @@ class BlessingFlip(TaskBase):
         y = self.y_start + row * (self.card_height + self.y_gap) + self.card_height // 2
         return x, y
 
-    def click_card(self, row, col):
+    async def click_card(self, row, col):
         center = self.get_card_position(row, col)
-        self.device.click(center)
+        await self.device.click(center)
         self.logging.log(f"点击卡牌 ({row}, {col})", self.target, logging.DEBUG)
 
     def recognize_card(self, img, card_templates):
@@ -117,7 +115,7 @@ class BlessingFlip(TaskBase):
             for i in range(4):
                 for j in range(5):
                     if (i, j) not in flipped_cards:
-                        self.click_card(i, j)
+                        await self.click_card(i, j)
 
                         await asyncio.sleep(0.4)
                         screenshot_img = self.device.get_screencap()
@@ -145,13 +143,13 @@ class BlessingFlip(TaskBase):
                                 opened_cards.remove(found_entry)
                                 if opened == 2:
                                     await asyncio.sleep(1.5)
-                                    self.click_card(i, j)
+                                    await self.click_card(i, j)
                                     await asyncio.sleep(0.4)
-                                    self.click_card(prev_row, prev_col)
+                                    await self.click_card(prev_row, prev_col)
                                     await asyncio.sleep(1.5)
                                     opened = 0
                                 else:
-                                    self.click_card(prev_row, prev_col)
+                                    await self.click_card(prev_row, prev_col)
                                     await asyncio.sleep(1.5)
                                     opened = 0
                             else:

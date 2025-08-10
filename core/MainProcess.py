@@ -29,7 +29,7 @@ class MainProcess:
             # DailyTest(self.target),
             # BlessingFlip(self.target),
             # Permanent(self.target),
-            Radar(self.target),
+            Order(self.target),
             
             # Wreckage(self.target)
                 

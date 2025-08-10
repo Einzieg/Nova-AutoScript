@@ -52,7 +52,7 @@ class ControlTools:
                 coordinate = icon_center_x + random_offset_x + offset_x, icon_center_y + random_offset_y + offset_y
                 self.logging.log(f"{template.name} 匹配成功，坐标 [{coordinate}]", self.target)
                 if click:
-                    self.device.click(coordinate)
+                    await self.device.click(coordinate)
                 return coordinate
             else:
                 self.logging.log(f"{template.name} 未匹配，置信度 {max_val:.2%}", self.target, logging.DEBUG)

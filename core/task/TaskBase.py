@@ -1,11 +1,10 @@
 import asyncio
 import logging
-import time
 
 from core.ControlTools import ControlTools
+from core.LoadTemplates import Templates
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
-from core.LoadTemplates import Templates
 from device_operation.DeviceUtils import DeviceUtils
 from models.Module import Module
 
@@ -157,7 +156,7 @@ class TaskBase:
                 # Phase 2: Process each wreckage
                 for coordinate in coordinates.copy():  # Use copy to avoid modifying during iteration
                     try:
-                        self.control.device.click(coordinate)
+                        await self.control.device.click(coordinate)
                         wreckage_attempted += 1
                         # Attempt collection
                         if await self.control.await_element_appear(Templates.COLLECT, click=True, time_out=3):
