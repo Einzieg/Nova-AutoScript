@@ -4,6 +4,7 @@ from nicegui import ui
 
 from core.task.outer_tasks.BlessingFlip import BlessingFlip
 from core.task.daily_tasks.Radar import Radar
+from core.task.daily_tasks.Order import Order
 from core.task.test_tasks.Test2 import Test2
 from models.Module import Module
 
@@ -197,7 +198,8 @@ class GuiAppConfigurationTabs:
                         ui.label('批次')
             with ui.tab_panel(quick):
                 ui.button('星辰探宝', on_click=lambda: self.quick_run(tab_name, BlessingFlip)).props('color=green')
-                ui.button('刷隐秘', on_click=lambda: self.quick_run(tab_name, Radar)).props('color=green')
+                ui.button('隐秘', on_click=lambda: self.quick_run(tab_name, Radar)).props('color=green')
+                ui.button('订单', on_click=lambda: self.quick_run(tab_name, Order)).props('color=green')
                 ui.button('TEST2', on_click=lambda: self.quick_run(tab_name, Test2)).props('color=green')
 
     def quick_run(self, tab_name, task):

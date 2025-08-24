@@ -31,7 +31,7 @@ async def perform_swipe(controller: Touch, points: list, duration: int = 500):
     await controller.swipe(points, duration)
 
 
-# perform_screencap(MuMuCap(0))
+perform_screencap(MuMuCap(0))
 
 # asyncio.run(perform_swipe(MuMuTouch(6), [(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 500))
 # perform_swipe(ADBTouch('127.0.0.1:16576'), [(830, 850), (830, 590)], 150)
@@ -46,6 +46,6 @@ async def perform_swipe(controller: Touch, points: list, duration: int = 500):
 # cv2.waitKey(0)
 # cv2.destroyAllWindows()
 
-device = DeviceUtils("6")
-
-asyncio.run(device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200))
+# device = DeviceUtils("6")
+#
+# asyncio.run(device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200))
