@@ -49,7 +49,6 @@ class Radar(TaskBase):
 
     def __init__(self, target):
         super().__init__(target)
-        self.callback = False
         self.target = target
         self.hidden_policy = self.module.hidden_policy
 

@@ -53,7 +53,7 @@ TO_ORDER = Template(
 )
 PCBA_DELIVERY = Template(
     name="PCBA提交",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/PCBA_delivery.png"
 )
 ORDER_DEPARTURE = Template(
@@ -184,12 +184,11 @@ COLLECT_ALL = Template(
 class Order(TaskBase):
     def __init__(self, target):
         super().__init__(target)
-        self.callback = False
         self.target = target
         self.order_policy = self.module.order_policy
         self.order_hasten_policy = self.module.order_hasten_policy
-        from device_operation.RapidOcr import RapidOcr
-        self.ocr = RapidOcr()
+        # from device_operation.RapidOcr import RapidOcr
+        # self.ocr = RapidOcr()
 
     async def prepare(self):
         await super().prepare()
@@ -233,9 +232,10 @@ class Order(TaskBase):
             await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
             await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
             await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
-            if not await self.control.await_element_appear(TO_HOME, click=True, time_out=1):
-                raise OrderFinishes("PCBA道具已用完,订单结束")  # 如果正好为0
+            # if not await self.control.await_element_appear(TO_HOME, click=False, time_out=1):
+            #     raise OrderFinishes("PCBA道具已用完,订单结束")  # 如果正好为0
             await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3)
+            await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
 
         if '使用制造加速' in self.order_hasten_policy:
             self.logging.log(f"{TASK_NAME} 使用制造加速 <<<", self.target, logging.DEBUG)

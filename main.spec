@@ -55,5 +55,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='NovaAutoScript-0.13.0-Bata',
+    name='NovaAutoScript-0.13.1-Bata',
 )
