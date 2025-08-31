@@ -302,4 +302,5 @@ class GuiApp:
         app.on_shutdown(self.on_close)
         self.load_tabs()
         self.check_update()
+        # , on_air="MA6Q0Bb9rAmLQqVX"
         ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='Nova-AutoScript', favicon='🔧', reload=False)

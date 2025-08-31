@@ -66,9 +66,9 @@ class AdbClient:
             if os.path.exists(os.path.join(path, "adb.exe")):
                 return os.path.join(path, "adb.exe")
 
-    async def connect_tcp(self):
+    async def connect_tcp(self, max_retries: int = 3):
         """建立TCP连接"""
-        for attempt in range(self.max_retries):
+        for attempt in range(max_retries):
             if self.connected:
                 self.logging.log("已连接，跳过重复连接", self.name, logging.DEBUG)
                 return True
@@ -86,13 +86,13 @@ class AdbClient:
                     self.connected = True
                     return True
                 else:
-                    self.logging.log(f"连接尝试 {attempt + 1}/{self.max_retries} 失败: {result.strip()}", self.name, logging.WARNING)
-                    if attempt < self.max_retries:
+                    self.logging.log(f"连接尝试 {attempt + 1}/{max_retries} 失败: {result.strip()}", self.name, logging.WARNING)
+                    if attempt < max_retries:
                         self.logging.log(f"等待 {self.retry_delay} 秒后重试...", self.name, logging.INFO)
                         await asyncio.sleep(self.retry_delay)
             except Exception as e:
-                self.logging.log(f"连接尝试 {attempt + 1}/{self.max_retries} 出错: {str(e)}", self.name, logging.ERROR)
-                if attempt < self.max_retries:
+                self.logging.log(f"连接尝试 {attempt + 1}/{max_retries} 出错: {str(e)}", self.name, logging.ERROR)
+                if attempt < max_retries:
                     self.logging.log(f"等待 {self.retry_delay} 秒后重试...", self.name, logging.INFO)
                     await asyncio.sleep(self.retry_delay)
 
@@ -114,7 +114,7 @@ class AdbClient:
         with self.lock:
             if not self.connected:
                 self.logging.log("尝试重新连接设备...", self.name, logging.WARNING)
-                if not self.connect_tcp():
+                if not await self.connect_tcp():
                     raise RuntimeError("无法连接设备")
             return await self._run_command(["shell", command])
 

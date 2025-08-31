@@ -7,7 +7,7 @@ class NovaException(Exception):
         return self.message
 
 
-class TaskFinishes(Exception):
+class TaskFinishes(NovaException):
     def __init__(self, message="任务结束"):
         self.message = message
         super().__init__(self.message)
@@ -16,7 +16,7 @@ class TaskFinishes(Exception):
         return self.message
 
 
-class RadarFinishes(TaskFinishes):
+class RadarFinishes(NovaException):
     def __init__(self, message="雷达结束"):
         self.message = message
         super().__init__(self.message)
@@ -25,7 +25,7 @@ class RadarFinishes(TaskFinishes):
         return self.message
 
 
-class OrderFinishes(TaskFinishes):
+class OrderFinishes(NovaException):
     def __init__(self, message="订单结束"):
         self.message = message
         super().__init__(self.message)
@@ -34,7 +34,7 @@ class OrderFinishes(TaskFinishes):
         return self.message
     
 
-class PermPirateFinishes(TaskFinishes):
+class PermPirateFinishes(NovaException):
     def __init__(self, message="常驻海盗结束"):
         self.message = message
         super().__init__(self.message)

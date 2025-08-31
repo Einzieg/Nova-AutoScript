@@ -97,7 +97,7 @@ def non_max_suppression(boxes, overlap_thresh=0.5):
 
 def matching_more():
     img = perform_screencap(MuMuCap(0))
-    temp = cv2.imread("../static/novaimgs/monsters/elite_lv6.png")
+    temp = cv2.imread("../static/novaimgs/acquisition/alloy_wreckage.png")
     result = cv2.matchTemplate(img, temp, cv2.TM_CCOEFF_NORMED)
     threshold = 0.75
     locations = np.where(result >= threshold)
@@ -121,5 +121,5 @@ def matching_more():
     cv2.destroyAllWindows()
 
 
-matching_one()
-# matching_more()
+# matching_one()
+matching_more()

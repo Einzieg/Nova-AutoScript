@@ -1,0 +1,39 @@
+from core.LoadTemplates import Templates
+from core.task.TaskBase import *
+
+TASK_NAME = "启动"
+
+
+class Start(TaskBase):
+
+    def __init__(self, target):
+        super().__init__(target)
+        self.target = target
+        self.hidden_policy = self.module.hidden_policy
+
+    async def prepare(self):
+        await super().prepare()
+        self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
+
+    async def execute(self):
+        self._update_status(RUNNING)
+        await self.start()
+
+    async def cleanup(self):
+        await super().cleanup()
+        self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
+
+    async def start(self):
+        if self.module.autostart_simulator:
+            await self.device.start_simulator()
+            await self.device.async_init()
+            await self.device.check_running_status()
+            await self.device.check_wm_size()
+            if await self.control.await_element_appear(Templates.NEBULA, time_out=120, sleep=3):
+                self.logging.log("游戏启动成功", self.target)
+            else:
+                self.logging.log("游戏启动失败,尝试重启", self.target)
+                await self.device.close_app()
+                await self.start()
+        else:
+            self.logging.log("跳过启动模拟器", self.target)

@@ -22,7 +22,6 @@ class Test2(TaskBase):
     async def execute(self):
         self._update_status(RUNNING)
         try:
-
             self.logging.log(f'{TASK_NAME} 执行 >>>', self.target)
             await asyncio.sleep(2)
         except Exception as e:

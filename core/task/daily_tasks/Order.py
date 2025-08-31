@@ -291,11 +291,16 @@ class Order(TaskBase):
             self.logging.log(f"{TASK_NAME} 没找到PCBA提交，获取新订单 >>>", self.target, logging.DEBUG)
             await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
             await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
-            if not (await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=2) or await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3)):
+            if not (await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=2)
+                    or await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3)):
+
                 await self.device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200)
                 if not await self.control.matching_one(COLLECT_ALL, click=True):
                     raise OrderFinishes("PCBA或加速道具已用完,订单结束")  # 如果PCBA只够提交几个订单
                 self.device.click_back()
+            else:
+                if self.order_policy == '不使用超空间信标':
+                    raise OrderFinishes("订单结束")
             if self.order_policy == '使用超空间信标':
                 self.logging.log(f"{TASK_NAME} 使用超空间信标 >>>", self.target, logging.DEBUG)
                 await self.control.await_element_appear(BEACON_ORDER, click=True, time_out=3)
