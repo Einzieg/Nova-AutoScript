@@ -118,7 +118,7 @@ class TaskBase:
 
     async def combat_checks(self):
         self.logging.log("检查是否进入战斗 >>>", self.target, logging.DEBUG)
-        if await self.control.await_element_appear(Templates.IN_BATTLE, time_out=180):
+        if await self.control.await_element_appear(Templates.IN_BATTLE, time_out=180, sleep=1):
             self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
             if await self.control.await_element_disappear(Templates.IN_BATTLE, time_out=120, sleep=3):
