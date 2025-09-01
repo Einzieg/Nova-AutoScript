@@ -1,3 +1,5 @@
+from watchfiles import awatch
+
 from core.task.TaskBase import *
 
 TASK_NAME = "常驻任务"
@@ -23,60 +25,29 @@ class Permanent(TaskBase):
 
     async def start(self):
         while True:
+            await self.reset_process()
             await self.attack_monsters()
             await self.collect_wreckage()
 
     async def collect_wreckage(self):
-        if not self.module.wreckage:
-            return
-
-        await self.reset_process()
-
-        swipes = [
-            None,  # 初始不滑动
-            [(900, 480), (900, 600), (900, 720)],  # 小滑动
-            [(900, 840), (900, 720), (900, 600), (900, 480), (900, 360), (900, 240)],  # 大滑动
-        ]
-
-        for swipe in swipes:
-            if swipe:
-                await self.device.swipe(swipe, duration=400 if len(swipe) > 3 else 200)
-                await asyncio.sleep(1)
-
-            found = await self._search_and_collect()
-            if found:
-                return
-
-    async def _search_and_collect(self) -> bool:
-        """搜索残骸并尝试收集，成功返回 True，否则 False"""
-        for template in Templates.WRECKAGE_LIST:
-            wreckage = await self.control.move_coordinates(template)
-            if not wreckage:
-                continue
-
-            for coordinate in wreckage:
-                await self.device.click(coordinate)
-                await asyncio.sleep(0.3)
-
-                if await self.control.matching_one(Templates.RECALL):
-                    await self.device.click_back()
-
-                await self.control.await_element_appear(
-                    Templates.COLLECT, click=True, time_out=2, sleep=1
-                )
-
-                if await self.control.matching_one(Templates.NO_WORKSHIPS):
-                    await self.device.click_back()
-                    await asyncio.sleep(0.5)
-                    await self.device.click_back()
-                    await asyncio.sleep(30)
-                    return True
-
-            return True
-        return False
+        if self.module.wreckage:
+            await self.reset_process()
+            for template in Templates.WRECKAGE_LIST:
+                wreckage = await self.control.move_coordinates(template)
+                if wreckage:
+                    for coordinate in wreckage:
+                        await self.device.click(coordinate)
+                        await asyncio.sleep(0.3)
+                        if await self.control.matching_one(Templates.RECALL):
+                            await self.device.click_back()
+                        await self.control.await_element_appear(Templates.COLLECT, click=True, time_out=2, sleep=1)
+                        if await self.control.matching_one(Templates.NO_WORKSHIPS):
+                            await self.device.click_back()
+                            await asyncio.sleep(0.5)
+                            await self.device.click_back()
+                            return
 
     async def attack_monsters(self):
-        await self.reset_process()
         if self.module.red_monster:
             for template in Templates.MONSTER_RED_LIST:
                 if await self.control.matching_one(template, click=True):

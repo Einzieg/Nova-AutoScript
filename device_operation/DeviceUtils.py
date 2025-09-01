@@ -3,7 +3,6 @@ import logging
 import subprocess
 import sys
 import time
-import traceback
 from pathlib import Path
 
 from msc.adbcap import ADBCap
@@ -47,9 +46,8 @@ class DeviceUtils:
 
     def __new__(cls, name, *args, **kwargs):
         if name in cls._instances:
-            print(f"[{name}]使用已存在的实例")
             return cls._instances[name]
-        print(f"[{name}]创建实例")
+
         instance = super().__new__(cls)
         cls._instances[name] = instance
         cls._initialized_flags[name] = False
@@ -66,11 +64,6 @@ class DeviceUtils:
         self.name = name
         self.logging = LogManager()
 
-        # 检查是否已经初始化过
-        if type(self)._initialized_flags.get(name, False):
-            self.logging.log(f"[{self.name}]设备工具已初始化，跳过重复初始化", self.name, logging.INFO)
-            return
-
         if self.module.simulator_index < 5555:
             self.port = 16384 + 32 * self.module.simulator_index
             self.logging.log(f"计算端口号为 {self.port}", self.name, logging.DEBUG)
@@ -82,7 +75,6 @@ class DeviceUtils:
         # 预实例化截图和点击工具
         self._init_capture_tool()
         self._init_touch_tool()
-        self.logging.log(f"[{self.name}]初始化设备工具成功", self.name, logging.INFO)
 
         type(self)._initialized_flags[name] = True
 
@@ -97,8 +89,8 @@ class DeviceUtils:
             else:
                 self.capture_tool = tool_class(serial=f'127.0.0.1:{self.port}')
         except Exception as e:
-            self.logging.log(f"初始化截图工具失败: {traceback.format_exc()}", self.name, logging.ERROR)
-            raise Exception(f"初始化截图工具失败") from e
+            self.logging.log(f"初始化截图工具失败: {str(e)}", self.name, logging.ERROR)
+            self.capture_tool = None
 
     def _init_touch_tool(self):
         """初始化触摸工具"""
@@ -111,8 +103,8 @@ class DeviceUtils:
             else:
                 self.touch_tool = tool_class(serial=f'127.0.0.1:{self.port}')
         except Exception as e:
-            self.logging.log(f"初始化触摸工具失败: {traceback.format_exc()}", self.name, logging.ERROR)
-            raise Exception(f"初始化触摸工具失败") from e
+            self.logging.log(f"初始化触摸工具失败: {str(e)}", self.name, logging.ERROR)
+            self.touch_tool = None
 
     async def async_init(self):
         """异步初始化逻辑"""
@@ -131,7 +123,7 @@ class DeviceUtils:
             type(self)._async_initialized_flags[name] = True
         except Exception as e:
             self._cleanup_instance(name)
-            raise Exception(f"初始化设备失败: {e}") from e
+            raise
 
     def _cleanup_instance(self, name):
         """清理指定 name 的实例状态"""
@@ -203,7 +195,7 @@ class DeviceUtils:
                     continue
                 else:
                     self.logging.log(f"{self.conf.cap_tool} 截图失败: {str(e)}", self.name, logging.ERROR)
-                    raise Exception from e
+                    raise e
 
     async def click(self, coordinate):
         x, y = coordinate
