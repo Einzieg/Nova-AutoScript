@@ -41,6 +41,7 @@ class TaskBase:
 
     async def execute(self):
         """主执行逻辑（需子类实现）"""
+        await self.device.async_init()
         raise NotImplementedError
 
     async def cleanup(self):
@@ -58,7 +59,9 @@ class TaskBase:
         await self.shortcut_check()
         await self.select_fleet_check()
         await self.none_available_check()
-        await self.control.matching_one(Templates.TO_HOME, click=True, sleep=2)
+        await self.sign_back_check()
+        await self.disconnected_check()
+        await self.control.matching_one(Templates.TO_HOME, click=True)
 
     async def relogin_check(self):
         """检查是否需要重新登录"""
@@ -93,6 +96,14 @@ class TaskBase:
     async def none_available_check(self):
         if await self.control.matching_one(Templates.NO_WORKSHIPS):
             await self.device.click_back()
+
+    async def sign_back_check(self):
+        if await self.control.matching_one(Templates.SIGN_BACK_IN):
+            await self.control.matching_one(Templates.CONFIRM_RELOGIN, click=True, sleep=10)
+
+    async def disconnected_check(self):
+        if await self.control.matching_one(Templates.DISCONNECTED):
+            raise TaskFinishes("无法连接到网络")
 
     async def attack(self):
         self.revenge = False

@@ -62,6 +62,7 @@ class Radar(TaskBase):
 
     async def cleanup(self):
         await super().cleanup()
+        await self.return_home()
         self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
 
     async def start(self):

@@ -45,9 +45,9 @@ class Module(Model):
 
     order_switch = BlobField(default=False)  # 订单开关
 
-    order_policy = CharField(default="使用超空间信标")  # 订单策略
+    order_policy = CharField(default="使用超空间信标")  # 订单策略 (使用超空间信标/不使用超空间信标/使用GEC购买信标)
 
-    order_hasten_policy = CharField(default="使用订单电路板")  # 加速策略
+    order_hasten_policy = CharField(default="使用订单电路板")  # 加速策略  (使用订单电路板/使用制造加速)
 
     order_times = IntegerField(null=True)  # 订单次数
 

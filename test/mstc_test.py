@@ -5,6 +5,7 @@ from msc.minicap import MiniCap
 from msc.mumu import MuMuCap
 from msc.droidcast import DroidCast
 from msc.screencap import ScreenCap
+from mtc.maatouch import MaaTouch
 from mtc.minitouch import MiniTouch
 from mtc.mumu import MuMuTouch
 from mtc.touch import Touch
@@ -43,8 +44,8 @@ async def perform_swipe(controller: Touch, points: list, duration: int = 500):
 #
 # asyncio.run(device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200))
 
-# control = MiniTouch('127.0.0.1:16384')
-# asyncio.run(control.pinch((650, 235), (1265, 840), (900, 480), (1020, 600), duration=400))
+control = MaaTouch('127.0.0.1:16384')
+asyncio.run(control.pinch((650, 235), (1265, 840), (900, 480), (1020, 600), duration=400))
 
 # control = MiniTouch('127.0.0.1:16384')
 # asyncio.run(control.click(1290, 200))

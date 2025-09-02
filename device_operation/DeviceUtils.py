@@ -44,16 +44,6 @@ class DeviceUtils:
     _initialized_flags = {}
     _async_initialized_flags = {}
 
-    def __new__(cls, name, *args, **kwargs):
-        if name in cls._instances:
-            return cls._instances[name]
-
-        instance = super().__new__(cls)
-        cls._instances[name] = instance
-        cls._initialized_flags[name] = False
-        cls._async_initialized_flags[name] = False
-        return instance
-
     def __init__(self, name):
         """
         初始化DeviceUtils实例。
@@ -72,14 +62,13 @@ class DeviceUtils:
 
         self.adb = AdbClient(self.name, port=self.port)
 
-        # 预实例化截图和点击工具
-        self._init_capture_tool()
-        self._init_touch_tool()
+        # 延迟初始化
+        self.capture_tool = None
+        self.touch_tool = None
 
         type(self)._initialized_flags[name] = True
 
     def _init_capture_tool(self):
-        """初始化截图工具"""
         try:
             tool_class = self.CAP_TOOLS.get(self.conf.cap_tool)
             if not tool_class:
@@ -88,6 +77,7 @@ class DeviceUtils:
                 self.capture_tool = tool_class(instance_index=self.module.simulator_index)
             else:
                 self.capture_tool = tool_class(serial=f'127.0.0.1:{self.port}')
+            self.logging.log(f"截图工具 {tool_class.__name__} 初始化成功", self.name, logging.INFO)
         except Exception as e:
             self.logging.log(f"初始化截图工具失败: {str(e)}", self.name, logging.ERROR)
             self.capture_tool = None
@@ -102,16 +92,16 @@ class DeviceUtils:
                 self.touch_tool = tool_class(instance_index=self.module.simulator_index)
             else:
                 self.touch_tool = tool_class(serial=f'127.0.0.1:{self.port}')
+            self.logging.log(f"点击工具 {tool_class.__name__} 初始化成功", self.name, logging.INFO)
         except Exception as e:
             self.logging.log(f"初始化触摸工具失败: {str(e)}", self.name, logging.ERROR)
             self.touch_tool = None
 
     async def async_init(self):
         """异步初始化逻辑"""
-        name = self.name
-
-        # 如果已异步初始化，跳过
-        if self._async_initialized_flags.get(name, False):
+        self.logging.log("正在执行工具初始化...", self.name, logging.INFO)
+        if self._async_initialized_flags.get(self.name, False):
+            self.logging.log("工具已初始化, 跳过初始化", self.name, logging.INFO)
             return
 
         try:
@@ -119,11 +109,17 @@ class DeviceUtils:
             conn = await self.adb.connect_tcp(max_retries=10)
             if not conn:
                 raise Exception("连接设备失败,可能原因:序列号填写错误/模拟器未开启/端口被占用")
-            # 异步初始化成功
-            type(self)._async_initialized_flags[name] = True
+
+            # 连接成功后初始化工具
+            self._init_capture_tool()
+            self._init_touch_tool()
+
+            type(self)._async_initialized_flags[self.name] = True
+            self.logging.log("工具初始化完成", self.name, logging.INFO)
         except Exception as e:
-            self._cleanup_instance(name)
-            raise
+            self.logging.log("工具初始化失败", self.name, logging.ERROR)
+            self._cleanup_instance(self.name)
+            raise Exception("工具初始化失败") from e
 
     def _cleanup_instance(self, name):
         """清理指定 name 的实例状态"""
@@ -181,6 +177,9 @@ class DeviceUtils:
             raise
 
     def get_screencap(self, max_retries: int = 3):
+        if not self.capture_tool:
+            self._init_capture_tool()
+
         start_time = time.time()
         for attempt in range(max_retries):
             try:
@@ -190,14 +189,14 @@ class DeviceUtils:
                 self.logging.log(f"{self.conf.cap_tool} 截图成功,耗时 {time.time() - start_time:.2f}s", self.name, logging.DEBUG)
                 return screencap
             except Exception as e:
-                self.logging.log(f"{self.conf.cap_tool} 截图失败, 重试次数 {attempt + 1}: {str(e)}", self.name, logging.ERROR)
-                if attempt < max_retries:
-                    continue
-                else:
-                    self.logging.log(f"{self.conf.cap_tool} 截图失败: {str(e)}", self.name, logging.ERROR)
-                    raise e
+                self.logging.log(f"{self.conf.cap_tool} 截图失败, 重试 {attempt + 1}: {str(e)}", self.name, logging.ERROR)
+                if attempt == max_retries - 1:
+                    raise
 
     async def click(self, coordinate):
+        if not self.touch_tool:
+            self._init_touch_tool()
+
         x, y = coordinate
         try:
             if not self.touch_tool:
@@ -208,6 +207,9 @@ class DeviceUtils:
             raise
 
     async def swipe(self, points: list, duration: int):
+        if not self.touch_tool:
+            self._init_touch_tool()
+
         try:
             if not self.touch_tool:
                 raise ValueError("触摸工具未初始化")

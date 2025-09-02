@@ -12,12 +12,13 @@ class Start(TaskBase):
         self.hidden_policy = self.module.hidden_policy
 
     async def prepare(self):
-        await super().prepare()
+        # await super().prepare()
         self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
         await self.start()
+        await self.device.async_init()
 
     async def cleanup(self):
         await super().cleanup()
@@ -26,7 +27,6 @@ class Start(TaskBase):
     async def start(self):
         if self.module.autostart_simulator:
             await self.device.start_simulator()
-            await self.device.async_init()
             await self.device.check_running_status()
             await self.device.check_wm_size()
             if await self.control.await_element_appear(Templates.NEBULA, time_out=120, sleep=3):
@@ -37,3 +37,4 @@ class Start(TaskBase):
                 await self.start()
         else:
             self.logging.log("跳过启动模拟器", self.target)
+
