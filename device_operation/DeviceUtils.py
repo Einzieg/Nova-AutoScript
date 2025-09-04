@@ -5,6 +5,7 @@ import sys
 import time
 from pathlib import Path
 
+import cv2
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
@@ -192,6 +193,16 @@ class DeviceUtils:
                 self.logging.log(f"{self.conf.cap_tool} 截图失败, 重试 {attempt + 1}: {str(e)}", self.name, logging.ERROR)
                 if attempt == max_retries - 1:
                     raise
+
+    def save_screencap(self, filename: str = "screenshot.png"):
+        """保存截图到指定路径"""
+        try:
+            screencap = self.get_screencap()
+            cv2.imwrite(filename, screencap)
+            self.logging.log(f"已保存截图", self.name, logging.INFO)
+        except Exception as e:
+            self.logging.log(f"保存截图时出错: {str(e)}", self.name, logging.ERROR)
+            raise Exception from e
 
     async def click(self, coordinate):
         if not self.touch_tool:

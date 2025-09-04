@@ -27,11 +27,11 @@ class Module(Model):
 
     normal_monster = BlobField(default=False)  # 普通清道夫
 
-    elite_monster = BlobField(default=False)  # 精英清道夫
+    elite_monster = BlobField(default=True)  # 精英清道夫
 
     red_monster = BlobField(default=False)  # 深红入侵
 
-    wreckage = BlobField(default=False)  # 采集残骸
+    wreckage = BlobField(default=True)  # 采集残骸
 
     # 其他任务 ---------------------------------------------
 
@@ -47,7 +47,7 @@ class Module(Model):
 
     order_policy = CharField(default="使用超空间信标")  # 订单策略 (使用超空间信标/不使用超空间信标/使用GEC购买信标)
 
-    order_hasten_policy = CharField(default="使用订单电路板")  # 加速策略  (使用订单电路板/使用制造加速)
+    order_hasten_policy = CharField(default="使用制造加速")  # 加速策略  (使用订单电路板/使用制造加速)
 
     order_times = IntegerField(null=True)  # 订单次数
 

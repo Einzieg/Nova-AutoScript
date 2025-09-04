@@ -2,6 +2,12 @@ from core.task.TaskBase import *
 
 TASK_NAME = "常驻任务"
 
+swipes = [
+    None,  # 初始不滑动
+    [(900, 480), (900, 600), (900, 720)],  # 小滑动
+    [(900, 840), (900, 720), (900, 600), (900, 480), (900, 360), (900, 240)],  # 大滑动
+]
+
 
 class Permanent(TaskBase):
 
@@ -23,6 +29,7 @@ class Permanent(TaskBase):
 
     async def start(self):
         while True:
+            await self.device.check_running_status()
             await self.attack_monsters()
             await self.collect_wreckage()
 
@@ -31,12 +38,6 @@ class Permanent(TaskBase):
             return
 
         await self.reset_process()
-
-        swipes = [
-            None,  # 初始不滑动
-            [(900, 480), (900, 600), (900, 720)],  # 小滑动
-            [(900, 840), (900, 720), (900, 600), (900, 480), (900, 360), (900, 240)],  # 大滑动
-        ]
 
         for swipe in swipes:
             if swipe:
@@ -56,7 +57,7 @@ class Permanent(TaskBase):
 
             for coordinate in wreckage:
                 await self.device.click(coordinate)
-                await asyncio.sleep(0.3)
+                await asyncio.sleep(0.5)
 
                 if await self.control.matching_one(Templates.RECALL):
                     await self.device.click_back()
@@ -73,25 +74,31 @@ class Permanent(TaskBase):
                     return True
 
             return True
+        self.logging.log("未找到残骸", self.target, logging.INFO)
         return False
 
     async def attack_monsters(self):
         await self.reset_process()
-        if self.module.red_monster:
-            for template in Templates.MONSTER_RED_LIST:
-                if await self.control.matching_one(template, click=True):
-                    await self.attack()
-                    await self.attack_monsters()
-        if self.module.elite_monster:
-            for template in Templates.MONSTER_ELITE:
-                if await self.control.matching_one(template, click=True):
-                    await self.attack()
-                    await self.attack_monsters()
-        if self.module.normal_monster:
-            for template in Templates.MONSTER_NORMAL_LIST:
-                if await self.control.matching_one(template, click=True):
-                    await self.attack()
-                    await self.attack_monsters()
+
+        monster_configs = [
+            (self.module.red_monster, Templates.MONSTER_RED_LIST),
+            (self.module.elite_monster, Templates.MONSTER_ELITE_LIST),
+            (self.module.normal_monster, Templates.MONSTER_NORMAL_LIST),
+        ]
+
+        for swipe in swipes:
+            if swipe:
+                await self.device.swipe(swipe, duration=400 if len(swipe) > 2 else 200)
+                await asyncio.sleep(1)
+
+            for enabled, template_list in monster_configs:
+                if not enabled:
+                    continue
+
+                for template in template_list:
+                    if await self.control.matching_one(template, click=True):
+                        await self.attack()
+                        return await self.attack_monsters()
 
     async def reset_process(self):
         await self.return_home()

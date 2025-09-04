@@ -23,9 +23,9 @@ def perform_click(controller: Touch, x, y):
 
 
 def matching_one():
-    img = perform_screencap(MuMuCap(0))
-    temp = cv2.imread(r"../static/novaimgs/alliance/donation/donate.png")
-    # temp = cv2.imread("screencap.png")
+    img = perform_screencap(MuMuCap(1))
+    # temp = cv2.imread(r"../static/novaimgs/alliance/donation/donate.png")
+    temp = cv2.imread("screencap.png")
 
     result = cv2.matchTemplate(img, temp, cv2.TM_CCOEFF_NORMED)
     # 获取到小图的尺寸
@@ -34,7 +34,7 @@ def matching_one():
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
     print(max_val)
 
-    if max_val > 0.75:
+    if max_val > 0.65:
         top_left = max_loc
         bottom_right = (top_left[0] + icon_w, top_left[1] + icon_h)
         cv2.rectangle(img, top_left, bottom_right, (0, 0, 255), 2)
@@ -121,5 +121,5 @@ def matching_more():
     cv2.destroyAllWindows()
 
 
-# matching_one()
-matching_more()
+matching_one()
+# matching_more()

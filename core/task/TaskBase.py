@@ -42,6 +42,7 @@ class TaskBase:
     async def execute(self):
         """主执行逻辑（需子类实现）"""
         await self.device.async_init()
+        # 可能需要增加检查游戏运行状态,防止游戏闪退
         raise NotImplementedError
 
     async def cleanup(self):

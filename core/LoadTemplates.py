@@ -93,13 +93,13 @@ class Templates:
     WRECKAGE_LIST = [
         Template(
             name="精英残骸",
-            threshold=0.70,
+            threshold=0.68,
             template_path=ROOT_DIR / "static/novaimgs/acquisition/elite_wreckage.png",
             forbidden=True,
         ),
         Template(
             name="合金残骸",
-            threshold=0.70,
+            threshold=0.68,
             template_path=ROOT_DIR / "static/novaimgs/acquisition/alloy_wreckage.png",
             forbidden=True,
         ),
@@ -147,7 +147,7 @@ class Templates:
         ),
     ]
 
-    MONSTER_ELITE = [
+    MONSTER_ELITE_LIST = [
         Template(
             name="6级首领",
             threshold=0.75,
