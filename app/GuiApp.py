@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 from nicegui import ui, app
+from peewee import fn
 
 from app.GuiAppConfigurationTabs import GuiAppConfigurationTabs
 from app.GuiAppSetting import GuiAppSetting
@@ -243,7 +244,9 @@ class GuiApp:
             if Module.get_or_none(Module.name == new_tab_name):
                 ui.notify('该名称已存在', color='red')
                 return
-            Module.create(name=new_tab_name)
+            max_simulator = Module.select(fn.MAX(Module.simulator_index)).scalar()
+            max_simulator = max_simulator if max_simulator is not None else -1
+            Module.create(name=new_tab_name, simulator_index=max_simulator + 1)
             self.new_tab_input.value = ''
             self.load_tabs()
             self.vertical_tabs.value = new_tab_name
