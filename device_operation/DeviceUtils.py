@@ -1,20 +1,22 @@
 import asyncio
 import logging
 import subprocess
-import time
 import sys
-
+import time
 from pathlib import Path
 
+import cv2
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
+
 if sys.platform != 'darwin':
     from msc.mumu import MuMuCap
 from msc.screencap import ScreenCap
 from mtc.adb import ADBTouch
 from mtc.maatouch import MaaTouch
 from mtc.minitouch import MiniTouch
+
 if sys.platform != 'darwin':
     from mtc.mumu import MuMuTouch
 from mtc.touch import Touch
@@ -26,32 +28,22 @@ from models import Config, Module
 
 class DeviceUtils:
     CAP_TOOLS = {
-            'ADB': ADBCap,
-            'MiniCap': MiniCap,
-            'DroidCast': DroidCast
-        }
+        'ADB': ADBCap,
+        'MiniCap': MiniCap,
+        'DroidCast': DroidCast
+    }
     TOUCH_TOOLS = {
-            'ADB': ADBTouch,
-            'MiniTouch': MiniTouch,
-            'MaaTouch': MaaTouch
-        }
+        'ADB': ADBTouch,
+        'MiniTouch': MiniTouch,
+        'MaaTouch': MaaTouch
+    }
     if sys.platform != 'darwin':
         CAP_TOOLS['MuMu'] = MuMuCap
         TOUCH_TOOLS['MuMu'] = MuMuTouch
-        
+
     _instances = {}
     _initialized_flags = {}
     _async_initialized_flags = {}
-
-    def __new__(cls, name, *args, **kwargs):
-        if name in cls._instances:
-            return cls._instances[name]
-
-        instance = super().__new__(cls)
-        cls._instances[name] = instance
-        cls._initialized_flags[name] = False
-        cls._async_initialized_flags[name] = False
-        return instance
 
     def __init__(self, name):
         """
@@ -70,27 +62,65 @@ class DeviceUtils:
             self.port = self.module.simulator_index
 
         self.adb = AdbClient(self.name, port=self.port)
+
+        # 延迟初始化
+        self.capture_tool = None
+        self.touch_tool = None
+
         type(self)._initialized_flags[name] = True
+
+    def _init_capture_tool(self):
+        try:
+            tool_class = self.CAP_TOOLS.get(self.conf.cap_tool)
+            if not tool_class:
+                raise TypeError("未知的截图工具")
+            if tool_class.__name__ == 'MuMuCap':
+                self.capture_tool = tool_class(instance_index=self.module.simulator_index)
+            else:
+                self.capture_tool = tool_class(serial=f'127.0.0.1:{self.port}')
+            self.logging.log(f"截图工具 {tool_class.__name__} 初始化成功", self.name, logging.INFO)
+        except Exception as e:
+            self.logging.log(f"初始化截图工具失败: {str(e)}", self.name, logging.ERROR)
+            self.capture_tool = None
+
+    def _init_touch_tool(self):
+        """初始化触摸工具"""
+        try:
+            tool_class = self.TOUCH_TOOLS.get(self.conf.touch_tool)
+            if not tool_class:
+                raise ValueError("未知的点击工具")
+            if tool_class.__name__ == 'MuMuTouch':
+                self.touch_tool = tool_class(instance_index=self.module.simulator_index)
+            else:
+                self.touch_tool = tool_class(serial=f'127.0.0.1:{self.port}')
+            self.logging.log(f"点击工具 {tool_class.__name__} 初始化成功", self.name, logging.INFO)
+        except Exception as e:
+            self.logging.log(f"初始化触摸工具失败: {str(e)}", self.name, logging.ERROR)
+            self.touch_tool = None
 
     async def async_init(self):
         """异步初始化逻辑"""
-        name = self.name
-
-        # 如果已异步初始化，跳过
-        if self._async_initialized_flags[name]:
+        self.logging.log("正在执行工具初始化...", self.name, logging.INFO)
+        if self._async_initialized_flags.get(self.name, False):
+            self.logging.log("工具已初始化, 跳过初始化", self.name, logging.INFO)
             return
 
         try:
             self.logging.log("正在连接设备...", self.name, logging.DEBUG)
-            conn = await self.adb.connect_tcp()
+            conn = await self.adb.connect_tcp(max_retries=10)
             if not conn:
                 raise Exception("连接设备失败,可能原因:序列号填写错误/模拟器未开启/端口被占用")
-            await self.push_scripts()
-            # 异步初始化成功
-            type(self)._async_initialized_flags[name] = True
+
+            # 连接成功后初始化工具
+            self._init_capture_tool()
+            self._init_touch_tool()
+
+            type(self)._async_initialized_flags[self.name] = True
+            self.logging.log("工具初始化完成", self.name, logging.INFO)
         except Exception as e:
-            self._cleanup_instance(name)
-            raise
+            self.logging.log("工具初始化失败", self.name, logging.ERROR)
+            self._cleanup_instance(self.name)
+            raise Exception("工具初始化失败") from e
 
     def _cleanup_instance(self, name):
         """清理指定 name 的实例状态"""
@@ -102,9 +132,17 @@ class DeviceUtils:
         self.logging.log(f"正在使用 {controller.__class__.__name__} 截图...", self.name, logging.DEBUG)
         return controller.screencap()
 
-    def __perform_click(self, controller: Touch, x, y):
+    async def __perform_click(self, controller: Touch, x, y):
         self.logging.log(f"正在使用 {controller.__class__.__name__} 点击坐标 {x}, {y}...", self.name, logging.DEBUG)
-        controller.click(x, y)
+        await controller.click(x, y)
+
+    async def __perform_swipe(self, controller: Touch, points: list, duration: int):
+        self.logging.log(f"正在使用 {controller.__class__.__name__} 滑动...", self.name, logging.DEBUG)
+        await controller.swipe(points, duration)
+
+    async def __perform_pinch(self, controller: Touch, start1, start2, end1, end2, duration: int):
+        self.logging.log(f"正在使用 {controller.__class__.__name__} 缩放...", self.name, logging.DEBUG)
+        await controller.pinch(start1, start2, end1, end2, duration)
 
     async def push_scripts(self):
         """推送脚本文件到设备"""
@@ -125,57 +163,77 @@ class DeviceUtils:
             raise
 
     async def zoom_out(self):
-        """执行缩放操作"""
+        """
+        执行缩放操作
+        该操作只支持 MiniTouch和 MaaTouch
+        """
         try:
             self.logging.log("开始执行缩小操作...", self.name, logging.DEBUG)
-            await self.adb.shell("sh /sdcard/zoom_out.sh")
+            if not self.touch_tool:
+                raise ValueError("触摸工具未初始化")
+            await self.__perform_pinch(self.touch_tool, (650, 235), (1265, 840), (900, 480), (1020, 600), duration=400)
             self.logging.log("已执行缩放操作", self.name, logging.DEBUG)
         except Exception as e:
             self.logging.log(f"执行缩放操作时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    def get_screencap(self):
+    def get_screencap(self, max_retries: int = 3):
+        if not self.capture_tool:
+            self._init_capture_tool()
+
         start_time = time.time()
-        max_retries = 3
         for attempt in range(max_retries):
             try:
-                tool_class = self.CAP_TOOLS.get(self.conf.cap_tool)
-                if not tool_class:
-                    raise TypeError("未知的截图工具")
-                if tool_class.__name__ == 'MuMuCap':
-                    controller = tool_class(instance_index=self.module.simulator_index)
-                else:
-                    controller = tool_class(serial=f'127.0.0.1:{self.port}')
-                screencap = self.__perform_screencap(controller)
+                if not self.capture_tool:
+                    raise TypeError("截图工具未初始化")
+                screencap = self.__perform_screencap(self.capture_tool)
                 self.logging.log(f"{self.conf.cap_tool} 截图成功,耗时 {time.time() - start_time:.2f}s", self.name, logging.DEBUG)
                 return screencap
             except Exception as e:
-                self.logging.log(f"{self.conf.cap_tool} 截图失败, 重试次数 {attempt + 1}: {str(e)}", self.name, logging.ERROR)
-                if attempt < max_retries:
-                    continue
-                else:
-                    self.logging.log(f"{self.conf.cap_tool} 截图失败: {str(e)}", self.name, logging.ERROR)
-                    raise e
+                self.logging.log(f"{self.conf.cap_tool} 截图失败, 重试 {attempt + 1}: {str(e)}", self.name, logging.ERROR)
+                if attempt == max_retries - 1:
+                    raise
 
-    def click(self, coordinate):
+    def save_screencap(self, filename: str = "screenshot.png"):
+        """保存截图到指定路径"""
+        try:
+            screencap = self.get_screencap()
+            cv2.imwrite(filename, screencap)
+            self.logging.log(f"已保存截图", self.name, logging.INFO)
+        except Exception as e:
+            self.logging.log(f"保存截图时出错: {str(e)}", self.name, logging.ERROR)
+            raise Exception from e
+
+    async def click(self, coordinate):
+        if not self.touch_tool:
+            self._init_touch_tool()
+
         x, y = coordinate
         try:
-            tool_class = self.TOUCH_TOOLS.get(self.conf.touch_tool)
-            if not tool_class:
-                raise ValueError("未知的点击工具")
-            if tool_class.__name__ == 'MuMuTouch':
-                controller = tool_class(instance_index=self.module.simulator_index)
-            else:
-                controller = tool_class(serial=f'127.0.0.1:{self.port}')
-            self.__perform_click(controller, x, y)
+            if not self.touch_tool:
+                raise ValueError("点击工具未初始化")
+            await self.__perform_click(self.touch_tool, x, y)
         except Exception as e:
             self.logging.log(f"点击坐标时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
+    async def swipe(self, points: list, duration: int):
+        if not self.touch_tool:
+            self._init_touch_tool()
+
+        try:
+            if not self.touch_tool:
+                raise ValueError("触摸工具未初始化")
+            await self.__perform_swipe(self.touch_tool, points, duration)
+        except Exception as e:
+            self.logging.log(f"滑动时出错: {str(e)}", self.name, logging.ERROR)
+            raise
+
     async def start_simulator(self):
         try:
+            # "D:/Software/MuMuPlayer-12.0/nx_main/MuMuManager.exe control -v 0 launch"
             if self.conf.simulator_path:
-                subprocess.Popen([self.conf.simulator_path, "-v", str(self.module.simulator_index)],
+                subprocess.Popen([self.conf.simulator_path, "control", "-v", str(self.module.simulator_index), "launch"],
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  stdin=subprocess.PIPE,
@@ -192,16 +250,16 @@ class DeviceUtils:
     async def check_running_status(self):
         """检查应用是否正在运行"""
         try:
-            output = self.adb.shell("ps")
+            output = await self.adb.shell("ps")
             if "com.stone3.ig" in output:
                 self.logging.log("应用正在运行", self.name, logging.INFO)
-                output = self.adb.shell("dumpsys window | grep mFocusedWindow")
+                output = await self.adb.shell("dumpsys window | grep mFocusedWindow")
                 if "com.stone3.ig" in output:
                     self.logging.log("应用在前台运行", self.name, logging.INFO)
                     return True
                 else:
                     self.logging.log("应用未在前台运行,尝试重新打开应用", self.name, logging.INFO)
-                    self.close_app()
+                    await self.close_app()
                     await asyncio.sleep(3)
                     await self.launch_app()
             else:
@@ -218,9 +276,9 @@ class DeviceUtils:
             self.logging.log(f"启动应用时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    def close_app(self):
+    async def close_app(self):
         try:
-            self.adb.shell("am force-stop com.stone3.ig")
+            await self.adb.shell("am force-stop com.stone3.ig")
             self.logging.log("已关闭应用", self.name, logging.DEBUG)
         except Exception as e:
             self.logging.log(f"关闭应用时出错: {str(e)}", self.name, logging.ERROR)
@@ -240,3 +298,11 @@ class DeviceUtils:
             return None, None
         except Exception as e:
             self.logging.log(f"获取屏幕尺寸时出错: {str(e)}", self.name, logging.ERROR)
+
+
+if __name__ == '__main__':
+    from mmumu.manger import get_mumu_path
+
+    print(get_mumu_path())
+    # device = DeviceUtils("6")
+    # asyncio.run(device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 500))

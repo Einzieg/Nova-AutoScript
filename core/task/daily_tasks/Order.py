@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from core.NovaException import OrderFinishes
 from core.LoadTemplates import Template
+from core.NovaException import OrderFinishes
 from core.task.TaskBase import *
 
 TASK_NAME = "订单"
@@ -53,12 +53,17 @@ TO_ORDER = Template(
 )
 PCBA_DELIVERY = Template(
     name="PCBA提交",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/PCBA_delivery.png"
+)
+PCBA_INSUFFICIENT = Template(
+    name="PCBA不足",
+    threshold=0.75,
+    template_path=ROOT_DIR / "static/novaimgs/order/PCBA_insufficient.png"
 )
 ORDER_DEPARTURE = Template(
     name="订单离港",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/departures.png"
 )
 DELIVERY_CONFIRM = Template(
@@ -93,20 +98,30 @@ ORDER_IS_HERE = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/order_arrived.png"
 )
-ORDER_ONTHEWAY = Template(
-    name="订单未到",
+ECONOMY = Template(
+    name="经济",
     threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/order/order_ontheway.png"
+    template_path=ROOT_DIR / "static/novaimgs/order/economy.png"
 )
+# ORDER_ONTHEWAY = Template(
+#     name="订单未到",
+#     threshold=0.85,
+#     template_path=ROOT_DIR / "static/novaimgs/order/order_ontheway.png"
+# )
 QUICK_DELIVER = Template(
     name="快速提交",
-    threshold=0.85,
+    threshold=0.65,
     template_path=ROOT_DIR / "static/novaimgs/order/submit_order.png"
 )
 PRODUCE_ORDER = Template(
     name="订单获取",
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/produce_order.png"
+)
+DEVELOPMENT = Template(
+    name="研发",
+    threshold=0.85,
+    template_path=ROOT_DIR / "static/novaimgs/order/development.png"
 )
 GOTO_FACTORY = Template(
     name="前往工厂",
@@ -136,17 +151,13 @@ QHOUR_SPEEDUP = Template(
 QHOUR_SPEEDUP_OFFSET_X = 500
 QHOUR_SPEEDUP_OFFSET_Y = 15
 USE_SPEEDUP = Template(
-    name="使用加速",
-    threshold=0.85,
+    name="批量使用加速",
+    threshold=0.9,
     template_path=ROOT_DIR / "static/novaimgs/order/use_speedup.png"
 )
 USE_SPEEDUP_OFFSET_X = 500
 USE_SPEEDUP_OFFSET_Y = 0
-FACTORY_EMPTY = Template(
-    name="制造完毕",
-    threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/order/factory_empty.png"
-)
+
 CLOSE_FACTORY = Template(
     name="退出工厂",
     threshold=0.85,
@@ -169,20 +180,31 @@ BEACON_ORDER = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/fast_forward.png"
 )
+GEC_ORDER = Template(
+    name="GEC订单",
+    threshold=0.85,
+    template_path=ROOT_DIR / "static/novaimgs/order/gec_speedup.png"
+)
 BEACON_CONFIRM = Template(
     name="信标确认",
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/confirm_delivery.png"
+)
+COLLECT_ALL = Template(
+    name="全部领取",
+    threshold=0.85,
+    template_path=ROOT_DIR / "static/novaimgs/order/collect_all.png"
 )
 
 
 class Order(TaskBase):
     def __init__(self, target):
         super().__init__(target)
-        self.callback = False
         self.target = target
         self.order_policy = self.module.order_policy
         self.order_hasten_policy = self.module.order_hasten_policy
+        # from device_operation.RapidOcr import RapidOcr
+        # self.ocr = RapidOcr()
 
     async def prepare(self):
         await super().prepare()
@@ -206,7 +228,8 @@ class Order(TaskBase):
                 for i in range(100):  # 100 orders max per day
                     await self.return_home()
                     await self.order_process()
-        except OrderFinishes:
+        except OrderFinishes as e:
+            self.logging.log(e, self.target)
             self._update_status(SUCCESS)
             return
 
@@ -225,53 +248,52 @@ class Order(TaskBase):
             await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
             await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
             await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
-            if not await self.control.await_element_appear(TO_HOME, click=True, time_out=3):
-                raise OrderFinishes("PCBA道具已用完,订单结束")  # 如果正好为0
+            if await self.control.await_element_appear(PCBA_INSUFFICIENT, time_out=2):
+                await self.return_home()
+                raise OrderFinishes("PCBA道具不足")
+            await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3)
+            await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
 
         if '使用制造加速' in self.order_hasten_policy:
             self.logging.log(f"{TASK_NAME} 使用制造加速 <<<", self.target, logging.DEBUG)
-            if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
-                if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
-                    await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
-                    if await self.control.await_element_appear(PRODUCE_ORDER, click=True, time_out=2):
-                        await self.control.await_element_appear(GOTO_FACTORY, click=True, time_out=2)
-                        await self.control.await_element_appear(BACK_TO_QUEUE, click=True, time_out=2)
-                        while True:
-                            await self.control.await_element_appear(SMART_PRODUCTION, click=True, time_out=2)
-                            if await self.control.await_element_appear(FACTORY_EMPTY, click=True, time_out=2):
-                                break  # 智能生产后依然工厂为空闲，判定为无需继续生产
-
-                            await self.control.await_element_appear(SPEEDUP_PRODUCTION, click=True, time_out=2)
-                            if await self.control.await_element_appear(SPEEDUP_DEPLETED, click=False, time_out=2):
-                                raise OrderFinishes("加速道具耗尽,订单结束")
-                            await self.control.await_element_appear(QHOUR_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y)
-                            if not await self.control.await_element_appear(USE_SPEEDUP, click=True, time_out=2, offset_x=0, offset_y=0):
-                                raise OrderFinishes("15分钟加速道具耗尽,订单结束")
-                            await self.control.await_element_appear(QHOUR_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y)
-                        await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
-                        # 提交剩余订单
-                        if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
-                            if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
-                                await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
-                                if not await self.control.await_element_appear(PRODUCE_ORDER, click=False, time_out=2):
-                                    if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
-                                        await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
-                        else:
-                            raise OrderFinishes("无法找到系统界面,订单结束")
-                    else:
-                        if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
-                            await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
-                    # else:
-                    #     self.logging.log(f"{TASK_NAME} 订单已经提交，结束提交, 回到主界面 <<<", self.target, logging.DEBUG)
-                    #     await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
-                else:
-                    await self.control.await_element_appear(ORDER_ONTHEWAY, click=True, time_out=3)
-                    await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
-            else:
+            if not (await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=1) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=1)):
                 raise OrderFinishes("无法找到系统界面,订单结束")
-        else:
-            self.logging.log(f"{TASK_NAME} 不是使用制造加速 <<<", self.target, logging.DEBUG)
 
+            await self.control.await_element_appear(ECONOMY, click=True, time_out=1)
+            if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
+                await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
+                if await self.control.await_element_appear(PRODUCE_ORDER, click=True, time_out=2):
+                    await self.control.await_element_appear(GOTO_FACTORY, click=True, time_out=2)
+                    if await self.control.await_element_appear(DEVELOPMENT, click=False, time_out=2):
+                        raise OrderFinishes("无部件图纸")
+                    await self.control.await_element_appear(BACK_TO_QUEUE, click=True, time_out=2)
+                    while True:
+                        await self.control.await_element_appear(SMART_PRODUCTION, click=True, time_out=2, sleep=1.5)
+                        if not await self.control.await_element_appear(SPEEDUP_PRODUCTION, click=True, time_out=2):
+                            break  # 智能生产后依然工厂为空闲，判定为无需继续生产
+                        if await self.control.await_element_appear(SPEEDUP_DEPLETED, click=False, time_out=2):
+                            raise OrderFinishes("加速道具耗尽,订单结束")
+                        await self.control.await_element_appear(QHOUR_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                        await self.control.await_element_appear(USE_SPEEDUP, click=True, time_out=2, offset_x=0, offset_y=0, sleep=1)
+                        await self.control.await_element_appear(QHOUR_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                    await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
+                    # 提交剩余订单
+                    if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
+                        if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
+                            await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
+                            if not await self.control.await_element_appear(PRODUCE_ORDER, click=False, time_out=2):
+                                if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
+                                    await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
+                            else:
+                                await self.device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200)
+                                await asyncio.sleep(2)
+                                await self.control.matching_one(COLLECT_ALL, click=True)
+                                await self.device.swipe([(1000, 100), (1000, 110), (1000, 150), (1000, 950)], 200)
+                                await asyncio.sleep(2)
+                                await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=3)
+                else:
+                    await self.device.click_back()
+                    await self.return_home()
 
         # 第三步： 切换天赋至 -Time
         await self.change_talent(TALENT_TIME)
@@ -280,26 +302,25 @@ class Order(TaskBase):
         self.logging.log(f"{TASK_NAME} 获取新订单 >>>", self.target, logging.DEBUG)
         await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
-        #
-        if not await self.control.await_element_appear(PCBA_DELIVERY, click=False, time_out=2):
-            self.logging.log(f"{TASK_NAME} 没找到PCBA提交，获取新订单 >>>", self.target, logging.DEBUG)
-            await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
-            if not await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3):
-                if not (await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=2) or await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3)):
-                    raise OrderFinishes("PCBA或加速道具已用完,订单结束")  # 如果PCBA只够提交几个订单
-                if self.order_policy == '使用超空间信标':
-                    self.logging.log(f"{TASK_NAME} 使用超空间信标 >>>", self.target, logging.DEBUG)
-                    await self.control.await_element_appear(BEACON_ORDER, click=True, time_out=3)
-                    await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
-                else:
-                    self.logging.log(f"{TASK_NAME} {self.order_policy} >>>", self.target, logging.DEBUG)
+        await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
+        await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
 
-        await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
-            # TODO: if self.order_hasten_policy == "使用GEC购买信标":
-            
+        if await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3):
+            if self.order_policy == "不使用超空间信标":
+                await self.return_home()
+                raise OrderFinishes("不使用超空间信标,订单结束 <<<")
+            if await self.control.await_element_appear(GEC_ORDER, click=False, time_out=3):
+                if self.order_policy == "使用GEC购买信标":
+                    await self.control.await_element_appear(GEC_ORDER, click=True, time_out=1)
+                else:
+                    await self.return_home()
+                    raise OrderFinishes("超空间信标不足,订单结束 <<<")
+            if self.order_policy == "使用超空间信标":
+                await self.control.await_element_appear(BEACON_ORDER, click=True, time_out=3)
+            await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
 
     async def change_talent(self, mode):
-        self.logging.log(f"{TASK_NAME} 修改天赋至{mode} <<<", self.target, logging.DEBUG)
+        self.logging.log(f"{TASK_NAME} 修改天赋至{mode.name} <<<", self.target, logging.DEBUG)
         await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(MORE_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(TO_TALENT, click=True, time_out=3)

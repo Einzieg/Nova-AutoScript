@@ -1,11 +1,11 @@
 import asyncio
+import json
 import logging
-import time
 
 from core.ControlTools import ControlTools
+from core.LoadTemplates import Templates
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
-from core.LoadTemplates import Templates
 from device_operation.DeviceUtils import DeviceUtils
 from models.Module import Module
 
@@ -13,6 +13,15 @@ WAITING = 0
 RUNNING = 1
 SUCCESS = 2
 FAILED = -1
+
+fleet_map = {
+    "fleet1": (1290, 200),
+    "fleet2": (1290, 325),
+    "fleet3": (1290, 450),
+    "fleet4": (1290, 575),
+    "fleet5": (1290, 700),
+    "fleet6": (1290, 825),
+}
 
 
 class TaskBase:
@@ -28,11 +37,12 @@ class TaskBase:
 
     async def prepare(self):
         """任务前置操作"""
-        await self.device.async_init()
         self._update_status(WAITING)
 
     async def execute(self):
         """主执行逻辑（需子类实现）"""
+        await self.device.async_init()
+        # 可能需要增加检查游戏运行状态,防止游戏闪退
         raise NotImplementedError
 
     async def cleanup(self):
@@ -50,7 +60,9 @@ class TaskBase:
         await self.shortcut_check()
         await self.select_fleet_check()
         await self.none_available_check()
-        await self.control.matching_one(Templates.TO_HOME, click=True, sleep=2)
+        await self.sign_back_check()
+        await self.disconnected_check()
+        await self.control.matching_one(Templates.TO_HOME, click=True)
 
     async def relogin_check(self):
         """检查是否需要重新登录"""
@@ -86,13 +98,27 @@ class TaskBase:
         if await self.control.matching_one(Templates.NO_WORKSHIPS):
             await self.device.click_back()
 
+    async def sign_back_check(self):
+        if await self.control.matching_one(Templates.SIGN_BACK_IN):
+            await self.control.matching_one(Templates.CONFIRM_RELOGIN, click=True, sleep=10)
+
+    async def disconnected_check(self):
+        if await self.control.matching_one(Templates.DISCONNECTED):
+            raise TaskFinishes("无法连接到网络")
+
     async def attack(self):
+        self.revenge = False
         await self.control.await_element_appear(Templates.ATTACK_BUTTON, click=True, time_out=3)
         if await self.control.await_element_appear(Templates.REVENGE, time_out=2):
             self.revenge = True
             await self.control.matching_one(Templates.REVENGE_ATTACK, click=True, sleep=1)
         await self.control.matching_one(Templates.REPAIR, click=True, sleep=1)
-        await self.control.await_element_appear(Templates.SELECTALL, click=True, time_out=3, sleep=0.5)
+        fleets = json.loads(self.module.attack_fleet)
+        if "all" in fleets:
+            await self.control.await_element_appear(Templates.SELECTALL, click=True, time_out=3, sleep=0.5)
+        else:
+            for fleet in fleets:
+                await self.device.click(fleet_map[fleet])
 
         if await self.control.await_element_appear(Templates.CONFIRM_ATTACK, click=True, time_out=0.5):
             await self.combat_checks()
@@ -107,33 +133,18 @@ class TaskBase:
         if await self.control.await_element_appear(Templates.IN_BATTLE, time_out=180):
             self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
-            if await self.control.await_element_disappear(Templates.IN_BATTLE, time_out=120):
+            if await self.control.await_element_disappear(Templates.IN_BATTLE, time_out=120, sleep=3):
                 self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
 
     async def recall_fleets(self):
-        await self.control.await_element_appear(Templates.MENUS, click=True, time_out=2)
+        for template in Templates.MENUS:
+            await self.control.await_element_appear(template, click=True, time_out=2)
         await self.control.await_element_appear(Templates.FLEETS_MENU, click=True, time_out=3, sleep=2)
-        coordinate = await self.control.matching_one(Templates.HOVER_RECALL, click=False, offset_y=-1000)
-        await self.control.await_element_appear(Templates.HOVER_RECALL, click=True, time_out=3)
-        self.device.click(coordinate)
-        time.sleep(1)
+        await self.control.await_element_appear(Templates.HOVER_RECALL, click=True, time_out=2)
+        await self.device.click_back()
+        await asyncio.sleep(1)
 
-    # async def collect_wreckage(self):
-    #     self.logging.log("开始采集残骸>>>", self.target, logging.DEBUG)
-    #     while True:
-    #         for wreckage in Templates.WRECKAGE_LIST:
-    #             coords = await self.control.move_coordinates(wreckage)
-    #             coordinates.append(coords)
-    #         self.logging.log(f"got coordinates: {coordinates}", self.target, logging.DEBUG)
-    #         for coordinate in coordinates:
-    #             self.control.device.click(coordinate)
-    #             await self.control.await_element_appear(Templates.COLLECT, click=True, time_out=3)
-    #             if await self.control.await_element_appear(Templates.NO_WORKSHIPS, click=False, time_out=2):
-    #                 await self.control.await_element_appear(Templates.CONFIRM_RELOGIN, click=True, time_out=2)
-    #                 self.logging.log("采集残骸结束<<<", self.target, logging.DEBUG)
-    #                 return
-
-    async def collect_wreckage(self):
+    async def collect_wreckage_b(self):
         """Collects wreckage by iterating through predefined templates."""
         self.logging.log("开始采集残骸>>>", self.target, logging.DEBUG)
         coordinates = []  # Initialize coordinates list
@@ -147,20 +158,18 @@ class TaskBase:
                     if coords:  # Only append if coordinates were found
                         for coord in coords:
                             coordinates.append(coord)
-                
-    
-                self.logging.log(f"Found {len(coordinates)} wreckage coordinates: {coordinates}", 
-                            self.target, logging.DEBUG)
-                
+
+                self.logging.log(f"Found {len(coordinates)} wreckage coordinates: {coordinates}", self.target, logging.DEBUG)
+
                 if not coordinates:  # No wreckage found
                     self.logging.log("未发现残骸<<<", self.target, logging.DEBUG)
                     return
-                
+
                 # Phase 2: Process each wreckage
                 for coordinate in coordinates.copy():  # Use copy to avoid modifying during iteration
                     try:
-                        self.control.device.click(coordinate)
-                        wreckage_attempted+=1
+                        await self.control.device.click(coordinate)
+                        wreckage_attempted += 1
                         # Attempt collection
                         if await self.control.await_element_appear(Templates.COLLECT, click=True, time_out=3):
                             coordinates.remove(coordinate)  # Successfully processed
@@ -169,17 +178,17 @@ class TaskBase:
                         if await self.control.await_element_appear(Templates.RECALL, time_out=2):
                             coordinates.remove(coordinate)
                             continue
-                        
+
                         # Check for no workships condition
                         if await self.control.await_element_appear(Templates.NO_WORKSHIPS, click=False, time_out=2):
                             await self.control.await_element_appear(Templates.CONFIRM_RELOGIN, click=True, time_out=2)
                             self.logging.log("采集残骸结束: 没有工作舰<<<", self.target, logging.DEBUG)
                             return
-                            
+
                     except Exception as e:
                         self.logging.log(f"处理残骸时出错 {coordinate}: {str(e)}", self.target, logging.ERROR)
                         continue
-                
+
                 # Exit condition when all wreckage processed
                 if not coordinates:
                     self.logging.log("所有残骸采集完成<<<", self.target, logging.DEBUG)
@@ -187,7 +196,7 @@ class TaskBase:
                 if wreckage_attempted >= total_retry:
                     self.logging.log("已尝试8次残骸采集<<<", self.target, logging.DEBUG)
                     return
-                    
+
         except Exception as e:
             self.logging.log(f"采集残骸过程中发生严重错误: {str(e)}", self.target, logging.ERROR)
         finally:

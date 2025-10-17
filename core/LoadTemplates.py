@@ -26,6 +26,21 @@ class Templates:
         threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/button_confirm_relogin.png",
     )
+    SPACE_STATION = Template(
+        name="空间站",
+        threshold=0.75,
+        template_path=ROOT_DIR / "static/novaimgs/button/space_station.png",
+    )
+    STAR_SYSTEM = Template(
+        name="星系",
+        threshold=0.75,
+        template_path=ROOT_DIR / "static/novaimgs/button/star_system.png",
+    )
+    NEBULA = Template(
+        name="星云",
+        threshold=0.75,
+        template_path=ROOT_DIR / "static/novaimgs/button/nebula.png",
+    )
     MENUS = [
         Template(
             name="金菜单",
@@ -78,22 +93,22 @@ class Templates:
     WRECKAGE_LIST = [
         Template(
             name="精英残骸",
-            threshold=0.75,
+            threshold=0.68,
             template_path=ROOT_DIR / "static/novaimgs/acquisition/elite_wreckage.png",
             forbidden=True,
         ),
         Template(
             name="合金残骸",
-            threshold=0.75,
+            threshold=0.68,
             template_path=ROOT_DIR / "static/novaimgs/acquisition/alloy_wreckage.png",
             forbidden=True,
         ),
-        Template(
-            name="水晶残骸",
-            threshold=0.75,
-            template_path=ROOT_DIR / "static/novaimgs/acquisition/crystal_wreckage.png",
-            forbidden=True,
-        ),
+        # Template(
+        #     name="水晶残骸",
+        #     threshold=0.75,
+        #     template_path=ROOT_DIR / "static/novaimgs/acquisition/crystal_wreckage.png",
+        #     forbidden=True,
+        # ),
     ]
     RECALL = Template(
         name="召回",
@@ -132,7 +147,7 @@ class Templates:
         ),
     ]
 
-    MONSTER_ELITE = [
+    MONSTER_ELITE_LIST = [
         Template(
             name="6级首领",
             threshold=0.75,

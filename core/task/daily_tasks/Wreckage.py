@@ -31,7 +31,7 @@ class Wreckage(TaskBase):
         try:
             for i in range(2):
                 await self.collect_wreckage()
-                time.sleep(400)
+                await asyncio.sleep(400)
             return
         except Exception as e:
             self.logging.log(f"{TASK_NAME} 失败: {e}", self.target, logging.ERROR)

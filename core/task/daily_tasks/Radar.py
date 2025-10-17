@@ -49,7 +49,6 @@ class Radar(TaskBase):
 
     def __init__(self, target):
         super().__init__(target)
-        self.callback = False
         self.target = target
         self.hidden_policy = self.module.hidden_policy
 
@@ -63,6 +62,7 @@ class Radar(TaskBase):
 
     async def cleanup(self):
         await super().cleanup()
+        await self.return_home()
         self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
 
     async def start(self):

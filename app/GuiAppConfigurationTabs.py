@@ -2,8 +2,10 @@ import json
 
 from nicegui import ui
 
+from core.task.daily_tasks.Order import Order
+from core.task.daily_tasks.Radar import Radar
 from core.task.outer_tasks.BlessingFlip import BlessingFlip
-from core.task.test_tasks.Test2 import Test2
+from core.task.test_tasks.ScreenshotTest import ScreenshotTest
 from models.Module import Module
 
 
@@ -53,11 +55,13 @@ class GuiAppConfigurationTabs:
 
                 with ui.card().classes('w-full'):
                     with ui.row().classes('w-full items-center'):
-                        ui.select(label='出击舰队',
-                                  options={'all': '全选', 'fleet1': '舰队1', 'fleet2': '舰队2', 'fleet3': '3舰队', 'fleet4': '舰队4', 'fleet5': '舰队5', 'fleet6': '舰队6'},
-                                  on_change=lambda e: Module.update(attack_fleet=json.dumps(e.value)).where(Module.name == tab_name).execute(),
-                                  value=json.loads(module.attack_fleet),
-                                  multiple=True).classes('w-64').props('use-chips')
+                        ui.select(
+                            label='出击舰队',
+                            options={'all': '全选', 'fleet1': '舰队1', 'fleet2': '舰队2', 'fleet3': '舰队3', 'fleet4': '舰队4', 'fleet5': '舰队5', 'fleet6': '舰队6'},
+                            on_change=lambda e: Module.update(attack_fleet=json.dumps(e.value)).where(Module.name == tab_name).execute(),
+                            value=json.loads(module.attack_fleet),
+                            multiple=True
+                        ).classes('w-64').props('use-chips')
                         ui.select(
                             label='执行任务',
                             options={'daily': '日常任务', 'permanent': '常驻任务', 'events': '活动任务', 'outer': '其他任务'},
@@ -196,7 +200,9 @@ class GuiAppConfigurationTabs:
                         ui.label('批次')
             with ui.tab_panel(quick):
                 ui.button('星辰探宝', on_click=lambda: self.quick_run(tab_name, BlessingFlip)).props('color=green')
-                ui.button('TEST2', on_click=lambda: self.quick_run(tab_name, Test2)).props('color=green')
+                ui.button('隐秘', on_click=lambda: self.quick_run(tab_name, Radar)).props('color=green')
+                ui.button('订单', on_click=lambda: self.quick_run(tab_name, Order)).props('color=green')
+                ui.button('截图测试', on_click=lambda: self.quick_run(tab_name, ScreenshotTest)).props('color=green')
 
     def quick_run(self, tab_name, task):
         if self.app.target_running[tab_name]:

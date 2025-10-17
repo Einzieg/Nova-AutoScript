@@ -12,7 +12,7 @@ class Config(Model):
     receiver = CharField(null=True)
     simulator_path = CharField(null=True)
     cap_tool = CharField(default='MuMu')
-    touch_tool = CharField(default='MuMu')
+    touch_tool = CharField(default='MaaTouch')
 
     class Meta:
         database = db

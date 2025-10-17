@@ -2,10 +2,10 @@ import asyncio
 
 from core.task.TaskBase import *
 
-TASK_NAME = "TEST2"
+TASK_NAME = "截图测试"
 
 
-class Test2(TaskBase):
+class ScreenshotTest(TaskBase):
 
     def __init__(self, target):
         super().__init__(target)
@@ -22,9 +22,8 @@ class Test2(TaskBase):
     async def execute(self):
         self._update_status(RUNNING)
         try:
-
             self.logging.log(f'{TASK_NAME} 执行 >>>', self.target)
-            await asyncio.sleep(2)
+            self.device.save_screencap()
         except Exception as e:
             self.logging.log(f'{TASK_NAME} 失败 <<<', self.target)
             self._update_status(FAILED)

@@ -1,0 +1,93 @@
+name: Build and Release (Windows)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Upgrade pip and build tools
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+
+      - name: Install dependencies
+        run: |
+          pip install \
+            numpy==2.2.4 \
+            nicegui==2.13.0 \
+            opencv_python==4.11.0.86 \
+            pywebview==5.4 \
+            peewee==3.17.9 \
+            rapidocr_onnxruntime==1.4.4 \
+            rapidocr==2.0.6 \
+            pyinstaller>=6.13.0 \
+            git+https://github.com/Einzieg/mtc \
+            git+https://github.com/Einzieg/msc
+
+      - name: Build with PyInstaller (spec)
+        run: |
+          pyinstaller main.spec
+
+      - name: List dist
+        run: |
+          Get-ChildItem -Recurse dist | Format-List
+
+      - name: Determine version and package
+        id: pkg
+        run: |
+          $tag = if ("${{ github.ref_type }}" -eq 'tag') { "${{ github.ref_name }}" } else { "manual" }
+          $version = $tag.TrimStart('v')
+          # Default artifact folder name from spec
+          $defaultFolder = Join-Path "dist" "NovaAutoScript-0.21.3"
+          if (-Not (Test-Path $defaultFolder)) {
+            # Fallback to first directory in dist
+            $firstDir = Get-ChildItem dist -Directory | Select-Object -First 1
+            if ($null -eq $firstDir) { throw "No build output found under dist" }
+            $defaultFolder = $firstDir.FullName
+          }
+          $zipName = "NovaAH-windows-$version.zip"
+          Compress-Archive -Path "$defaultFolder/*" -DestinationPath $zipName -Force
+          Write-Output "zip=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pkg.outputs.zip }}
+          path: ${{ steps.pkg.outputs.zip }}
+
+      - name: Create GitHub Release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.pkg.outputs.zip }}
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

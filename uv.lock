@@ -12,7 +12,7 @@ resolution-markers = [
 
 [[package]]
 name = "adbutils"
-version = "2.8.9"
+version = "2.10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "deprecation" },
@@ -20,12 +20,12 @@ dependencies = [
     { name = "requests" },
     { name = "retry2" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0e/e5/0bd361b91bc1211acaf53730ac8bcc08c4122ee6bf8f2ee5361941ffb934/adbutils-2.8.9.tar.gz", hash = "sha256:ba26c6c46dbf5865119d9ac6416917145b274cbeada5d25ba23bf61320f737fb", size = 185634 }
+sdist = { url = "https://files.pythonhosted.org/packages/54/d1/2b368a5f8ae6f66feae2088310ae4fbe7d94cb048558815b862726b7e0fa/adbutils-2.10.1.tar.gz", hash = "sha256:7234a94aa6fa45e6108790ccb9823151c66321d41fbb76c67357abba04b540ea", size = 188577 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/e2/ea738fd6e2d607228a8b29b78d6659be5f4cbf2bec42ef0bdc23bfb2dd21/adbutils-2.8.9-py3-none-macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:668ef7da7b740c500c81ea3ecc073493cb8014ca23edd3ab161f82c486a4bb2b", size = 6705036 },
-    { url = "https://files.pythonhosted.org/packages/6b/82/c859a7a61b02922871c5f525571d6bf258e5aec779e75cbbc93ef9242533/adbutils-2.8.9-py3-none-manylinux1_x86_64.whl", hash = "sha256:e1420945d51f3fd7ae42b6e59d9843afc83adf4a7bc46bece9f52df02a9fa157", size = 3575985 },
-    { url = "https://files.pythonhosted.org/packages/99/ce/8c826a04f65890d0663705184b7d63e7b52db8a5e1ba19397cb6ec6ef1e0/adbutils-2.8.9-py3-none-win32.whl", hash = "sha256:4bf7a9fac54d4e1d6bb683e79ac1bc9d36eab8fe7168080c9423f905e5fb75bb", size = 3336603 },
-    { url = "https://files.pythonhosted.org/packages/67/78/9790414d2c2f4e16ba7dd41df79bc7f46cc45ad2c239227379435dc3b0cc/adbutils-2.8.9-py3-none-win_amd64.whl", hash = "sha256:0c566e99626872c3fcf1ebd9b2a51b240dadcaae83554046e963d523fcb20fab", size = 3336606 },
+    { url = "https://files.pythonhosted.org/packages/15/fc/ea6e31a07ce8b8cc09e4483d4aa28a2bb41f4f64d1acff3ad4f1263896bb/adbutils-2.10.1-py3-none-macosx_10_9_intel.macosx_10_9_x86_64.macosx_10_10_intel.macosx_10_10_x86_64.whl", hash = "sha256:50e569aa5424d1b42371eb7812147517f6a60b515b62c881f52865b8014b51cf", size = 6889062 },
+    { url = "https://files.pythonhosted.org/packages/a6/da/9428a216483e03e1bf136cf1f88df157ed0afb1d9d36fc75f5e214726921/adbutils-2.10.1-py3-none-manylinux1_x86_64.whl", hash = "sha256:b0bceb7072d78575f5f396eab25bb28cb3c5bee2e1d11950d508cbbb5ab39b13", size = 3668805 },
+    { url = "https://files.pythonhosted.org/packages/76/50/b6c5781ec7a3f6c055640218d4be021de3b9ef86994935c9d1ff7fdcf766/adbutils-2.10.1-py3-none-win32.whl", hash = "sha256:16e866b3bd484c273b1fd7fdec1bd4344611e02e4d65c5c6093f5a25ca6b26e3", size = 3433618 },
+    { url = "https://files.pythonhosted.org/packages/74/b2/56670ee8cabaa5702288a2556b92d44727aa1f63f3d13658c6f089572597/adbutils-2.10.1-py3-none-win_amd64.whl", hash = "sha256:b08e94ece0090d66cd09b5292283613c16621f9f042326bdce55ef862257ae77", size = 3433621 },
 ]
 
 [[package]]
@@ -630,7 +630,7 @@ wheels = [
 [[package]]
 name = "msc"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/msc#89c82db8b4b82cefb903877a6fa84b16ff46fd6f" }
+source = { git = "https://github.com/Einzieg/msc#f25e79e9155935d4602e150101c11427c1a53bcd" }
 dependencies = [
     { name = "msc-adb" },
     { name = "msc-base" },
@@ -642,7 +642,7 @@ dependencies = [
 [[package]]
 name = "msc-adb"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/msc?subdirectory=msc-adb#89c82db8b4b82cefb903877a6fa84b16ff46fd6f" }
+source = { git = "https://github.com/Einzieg/msc?subdirectory=msc-adb#f25e79e9155935d4602e150101c11427c1a53bcd" }
 dependencies = [
     { name = "adbutils" },
     { name = "msc-base" },
@@ -652,7 +652,7 @@ dependencies = [
 [[package]]
 name = "msc-base"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/msc?subdirectory=msc-base#89c82db8b4b82cefb903877a6fa84b16ff46fd6f" }
+source = { git = "https://github.com/Einzieg/msc?subdirectory=msc-base#f25e79e9155935d4602e150101c11427c1a53bcd" }
 dependencies = [
     { name = "opencv-python" },
 ]
@@ -660,7 +660,7 @@ dependencies = [
 [[package]]
 name = "msc-droidcast"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/msc?subdirectory=msc-droidcast#89c82db8b4b82cefb903877a6fa84b16ff46fd6f" }
+source = { git = "https://github.com/Einzieg/msc?subdirectory=msc-droidcast#f25e79e9155935d4602e150101c11427c1a53bcd" }
 dependencies = [
     { name = "adbutils" },
     { name = "loguru" },
@@ -672,7 +672,7 @@ dependencies = [
 [[package]]
 name = "msc-minicap"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/msc?subdirectory=msc-minicap#89c82db8b4b82cefb903877a6fa84b16ff46fd6f" }
+source = { git = "https://github.com/Einzieg/msc?subdirectory=msc-minicap#f25e79e9155935d4602e150101c11427c1a53bcd" }
 dependencies = [
     { name = "adbutils" },
     { name = "loguru" },
@@ -683,7 +683,7 @@ dependencies = [
 [[package]]
 name = "msc-mumu"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/msc?subdirectory=msc-mumu#89c82db8b4b82cefb903877a6fa84b16ff46fd6f" }
+source = { git = "https://github.com/Einzieg/msc?subdirectory=msc-mumu#f25e79e9155935d4602e150101c11427c1a53bcd" }
 dependencies = [
     { name = "mmumu" },
     { name = "msc-base" },
@@ -693,7 +693,7 @@ dependencies = [
 [[package]]
 name = "mtc"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/mtc#41932eeb4fe7a6b6a77ebe985829ff488e81cacb" }
+source = { git = "https://github.com/Einzieg/mtc#f8c92c2aca2ed5cafeaa248b5e4a2802a67105d2" }
 dependencies = [
     { name = "mtc-adb" },
     { name = "mtc-base" },
@@ -706,7 +706,7 @@ dependencies = [
 [[package]]
 name = "mtc-adb"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/mtc?subdirectory=mtc-adb#41932eeb4fe7a6b6a77ebe985829ff488e81cacb" }
+source = { git = "https://github.com/Einzieg/mtc?subdirectory=mtc-adb#f8c92c2aca2ed5cafeaa248b5e4a2802a67105d2" }
 dependencies = [
     { name = "adbutils" },
     { name = "mtc-base" },
@@ -715,12 +715,12 @@ dependencies = [
 [[package]]
 name = "mtc-base"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/mtc?subdirectory=mtc-base#41932eeb4fe7a6b6a77ebe985829ff488e81cacb" }
+source = { git = "https://github.com/Einzieg/mtc?subdirectory=mtc-base#f8c92c2aca2ed5cafeaa248b5e4a2802a67105d2" }
 
 [[package]]
 name = "mtc-maatouch"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/mtc?subdirectory=mtc-maatouch#41932eeb4fe7a6b6a77ebe985829ff488e81cacb" }
+source = { git = "https://github.com/Einzieg/mtc?subdirectory=mtc-maatouch#f8c92c2aca2ed5cafeaa248b5e4a2802a67105d2" }
 dependencies = [
     { name = "adbutils" },
     { name = "loguru" },
@@ -731,7 +731,7 @@ dependencies = [
 [[package]]
 name = "mtc-minitouch"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/mtc?subdirectory=mtc-minitouch#41932eeb4fe7a6b6a77ebe985829ff488e81cacb" }
+source = { git = "https://github.com/Einzieg/mtc?subdirectory=mtc-minitouch#f8c92c2aca2ed5cafeaa248b5e4a2802a67105d2" }
 dependencies = [
     { name = "adbutils" },
     { name = "loguru" },
@@ -742,7 +742,7 @@ dependencies = [
 [[package]]
 name = "mtc-mumu"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/mtc?subdirectory=mtc-mumu#41932eeb4fe7a6b6a77ebe985829ff488e81cacb" }
+source = { git = "https://github.com/Einzieg/mtc?subdirectory=mtc-mumu#f8c92c2aca2ed5cafeaa248b5e4a2802a67105d2" }
 dependencies = [
     { name = "mmumu" },
     { name = "mtc-base" },
@@ -751,7 +751,7 @@ dependencies = [
 [[package]]
 name = "mtc-utils"
 version = "0.1.0"
-source = { git = "https://github.com/NakanoSanku/mtc?subdirectory=mtc-utils#41932eeb4fe7a6b6a77ebe985829ff488e81cacb" }
+source = { git = "https://github.com/Einzieg/mtc?subdirectory=mtc-utils#f8c92c2aca2ed5cafeaa248b5e4a2802a67105d2" }
 
 [[package]]
 name = "multidict"
@@ -881,8 +881,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "msc", git = "https://github.com/NakanoSanku/msc" },
-    { name = "mtc", git = "https://github.com/NakanoSanku/mtc" },
+    { name = "msc", git = "https://github.com/Einzieg/msc" },
+    { name = "mtc", git = "https://github.com/Einzieg/mtc" },
     { name = "nicegui", specifier = "==2.13.0" },
     { name = "numpy", specifier = "==2.2.4" },
     { name = "opencv-python", specifier = "==4.11.0.86" },

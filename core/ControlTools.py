@@ -52,7 +52,7 @@ class ControlTools:
                 coordinate = icon_center_x + random_offset_x + offset_x, icon_center_y + random_offset_y + offset_y
                 self.logging.log(f"{template.name} 匹配成功，坐标 [{coordinate}]", self.target)
                 if click:
-                    self.device.click(coordinate)
+                    await self.device.click(coordinate)
                 return coordinate
             else:
                 self.logging.log(f"{template.name} 未匹配，置信度 {max_val:.2%}", self.target, logging.DEBUG)
@@ -124,10 +124,10 @@ class ControlTools:
                 return True
         return False
 
-    async def await_element_disappear(self, template: Template, time_out=60):
+    async def await_element_disappear(self, template: Template, time_out=60, sleep=1):
         start_time = time.time()
         while time.time() - start_time < time_out:
-            if not await self.matching_one(template, click=False, sleep=1):
+            if not await self.matching_one(template, click=False, sleep=sleep):
                 return True
         return False
 
