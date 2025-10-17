@@ -17,7 +17,7 @@ class Permanent(TaskBase):
 
     async def prepare(self):
         await super().prepare()
-        self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 开始执行 >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
@@ -25,7 +25,7 @@ class Permanent(TaskBase):
 
     async def cleanup(self):
         await super().cleanup()
-        self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 执行完成 <<<", self.target)
 
     async def start(self):
         while True:

@@ -1,4 +1,3 @@
-from core.LoadTemplates import Templates
 from core.task.TaskBase import *
 
 TASK_NAME = "启动"
@@ -6,14 +5,15 @@ TASK_NAME = "启动"
 
 class Start(TaskBase):
 
-    def __init__(self, target):
+    def __init__(self, target, quick_start=False):
         super().__init__(target)
         self.target = target
+        self.quick_start = quick_start
         self.hidden_policy = self.module.hidden_policy
 
     async def prepare(self):
         # await super().prepare()
-        self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 开始执行 >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
@@ -22,10 +22,10 @@ class Start(TaskBase):
 
     async def cleanup(self):
         await super().cleanup()
-        self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 执行完成 <<<", self.target)
 
     async def start(self):
-        if self.module.autostart_simulator:
+        if self.module.autostart_simulator and not self.quick_start:
             await self.device.start_simulator()
             await self.device.check_running_status()
             await self.device.check_wm_size()
@@ -37,4 +37,3 @@ class Start(TaskBase):
                 await self.start()
         else:
             self.logging.log("跳过启动模拟器", self.target)
-

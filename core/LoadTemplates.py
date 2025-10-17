@@ -41,6 +41,22 @@ class Templates:
         threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/nebula.png",
     )
+    ALLIANCE = Template(
+        name="联盟",
+        threshold=0.75,
+        template_path=ROOT_DIR / "static/novaimgs/system/alliance.png",
+    )
+    TO_SYSTEM = Template(
+        name="系统按钮",
+        threshold=0.85,
+        template_path=ROOT_DIR / "static/novaimgs/button/button_system.png"
+    )
+    MORE_SYSTEM = Template(
+        name="系统更多",
+        threshold=0.85,
+        template_path=ROOT_DIR / "static/novaimgs/button/button_more_system.png"
+    )
+
     MENUS = [
         Template(
             name="金菜单",
@@ -66,24 +82,29 @@ class Templates:
     CLOSE_BUTTONS = [
         Template(
             name="关闭按钮1",
-            threshold=0.85,
+            threshold=0.8,
             template_path=ROOT_DIR / "static/novaimgs/button/btn_close1.png",
         ),
         Template(
             name="关闭按钮2",
-            threshold=0.85,
+            threshold=0.8,
             template_path=ROOT_DIR / "static/novaimgs/button/btn_close2.png",
         ),
         Template(
             name="关闭按钮3",
-            threshold=0.85,
+            threshold=0.8,
             template_path=ROOT_DIR / "static/novaimgs/button/btn_close3.png",
         ),
         Template(
             name="关闭按钮4",
-            threshold=0.85,
+            threshold=0.8,
             template_path=ROOT_DIR / "static/novaimgs/button/btn_close4.png",
-        )
+        ),
+        Template(
+            name="关闭按钮5",
+            threshold=0.8,
+            template_path=ROOT_DIR / "static/novaimgs/button/btn_close5.png",
+        ),
     ]
     TO_HOME = Template(
         name="返回主页",
@@ -234,6 +255,6 @@ class Templates:
     )
     REPAIR = Template(
         name="快速维修",
-        threshold=0.75,
+        threshold=0.65,
         template_path=ROOT_DIR / "static/novaimgs/button/quick_repair.png"
     )

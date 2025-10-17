@@ -1,18 +1,20 @@
 import asyncio
 import logging
+from pathlib import Path
 
 from nicegui import ui, app
 from peewee import fn
 
 from app.GuiAppConfigurationTabs import GuiAppConfigurationTabs
-from app.GuiAppSetting import GuiAppSetting
+from app.GuiAppSetting import GuiAppSetting, WINDOW_SIZE
 from core.LogManager import LogManager
 from core.MainProcess import MainProcess
-from models.Module import Module
+from models import Config, Module
 
 
 class GuiApp:
     def __init__(self):
+        self.conf = Config.get_or_create(id=1)[0]
         self.processes = {}
         self.target_thread = {}
         self.target_running = {}
@@ -72,74 +74,140 @@ class GuiApp:
 
     def _create_start_tab_panel(self, tabs_data):
         """创建Start标签页内容"""
+        is_portrait = self.conf.window_size == 1  # 1 对应 960x1040
+
         with ui.tab_panel(self.start_tab):
-            with ui.row().classes('w-full h-full'):
-                self._create_vertical_tabs(tabs_data)
-                self._create_vertical_tab_panels(tabs_data)
+            if is_portrait:
+                # 竖屏使用列布局
+                with ui.column().classes('w-full h-full'):
+                    self._create_vertical_tabs(tabs_data)
+                    self._create_vertical_tab_panels(tabs_data)
+            else:
+                # 横屏使用行布局
+                with ui.row().classes('w-full h-full'):
+                    self._create_vertical_tabs(tabs_data)
+                    self._create_vertical_tab_panels(tabs_data)
+
 
     def _create_vertical_tabs(self, tabs_data):
         """创建垂直标签页"""
-        with ui.column().classes('w-1/10 h-full fixed-tabs'):
-            self.vertical_tabs = ui.tabs().props('vertical').classes('w-full h-full')
-            with self.vertical_tabs:
-                for tab in tabs_data:
-                    ui.tab(tab.name, icon='insert_link')
-                self.add_tab = ui.tab('新增', icon='add')
+        is_portrait = self.conf.window_size == 1  # 1 对应 960x1040
+
+        if is_portrait:
+            # 竖屏时标签页横向排列在顶部
+            with ui.column().classes('w-full h-16'):
+                self.vertical_tabs = ui.tabs().props('').classes('w-full')
+                with self.vertical_tabs:
+                    for tab in tabs_data:
+                        ui.tab(tab.name, icon='insert_link')
+                    self.add_tab = ui.tab('新增', icon='add')
+        else:
+            # 横屏时保持原有垂直标签页
+            with ui.column().classes('w-1/10 h-full fixed-tabs'):
+                self.vertical_tabs = ui.tabs().props('vertical').classes('w-full h-full')
+                with self.vertical_tabs:
+                    for tab in tabs_data:
+                        ui.tab(tab.name, icon='insert_link')
+                    self.add_tab = ui.tab('新增', icon='add')
+
 
     def _create_configuration_tabs(self, tab_name):
         """创建配置标签页"""
         self.configuration_tabs.create_configuration_tabs(tab_name)
 
     def _create_vertical_tab_panels(self, tabs_data):
-        """创建垂直标签页内容面板"""
-        with ui.column().classes('h-full border').style('width:90%'):
-            with ui.tab_panels(self.vertical_tabs).props('vertical').classes('w-full h-full'):
+        """创建垂直标签页内容面板 - 响应式适配"""
+        # 根据窗口大小判断是否为竖屏模式
+        is_portrait = self.conf.window_size == 1  # 1 对应 960x1040
+
+        with ui.column().classes('h-full border').style('width:90%' if not is_portrait else 'width:100%'):
+            with ui.tab_panels(self.vertical_tabs).props('vertical' if not is_portrait else '').classes('w-full h-full'):
                 for tab in tabs_data:
                     with ui.tab_panel(tab.name).classes('w-full h-full'):
-                        with ui.row().classes('w-full h-full'):
-                            with ui.column().classes('h-full').style('width:60%'):
-                                with ui.row().classes('w-full h-full items-center'):
-                                    # 添加启动和停止按钮
-                                    start_btn = ui.button('启动', icon='start', on_click=lambda t=tab.name: self.start(t)).props('color=green')
-                                    stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab.name: self.stop(t)).props('color=red').classes('hidden')
-                                    pause_btn = ui.button('暂停', icon='pause', on_click=lambda t=tab.name: self.pause(t)).props('color=orange').classes('hidden')
-                                    restore_btn = ui.button('恢复', icon='restore', on_click=lambda t=tab.name: self.restore(t)).props('color=green').classes('hidden')
+                        # 根据屏幕方向选择布局方式
+                        if is_portrait:
+                            # 竖屏使用列布局
+                            with ui.column().classes('w-full h-full'):
+                                # 控制按钮区域
+                                with ui.column().classes('w-full'):
+                                    with ui.row().classes('w-full items-center flex-wrap'):
+                                        start_btn = ui.button('启动', icon='start', on_click=lambda t=tab.name: self.start(t)).props('color=green')
+                                        stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab.name: self.stop(t)).props('color=red').classes('hidden')
+                                        pause_btn = ui.button('暂停', icon='pause', on_click=lambda t=tab.name: self.pause(t)).props('color=orange').classes('hidden')
+                                        restore_btn = ui.button('恢复', icon='restore', on_click=lambda t=tab.name: self.restore(t)).props('color=green').classes('hidden')
+                                        edit_btn = ui.button('修改', icon='edit', on_click=lambda t=tab.name: self.update_tab(t))
+                                        del_btn = ui.button('删除', icon='delete_forever', on_click=lambda t=tab.name: self.remove_tab(t))
 
-                                    # 使用默认参数捕获当前 tab 的值
-                                    edit_btn = ui.button('修改', icon='edit', on_click=lambda t=tab.name: self.update_tab(t))
-                                    del_btn = ui.button('删除', icon='delete_forever', on_click=lambda t=tab.name: self.remove_tab(t))
+                                        self.tab_buttons[tab.name] = {
+                                            'start_btn': start_btn,
+                                            'stop_btn': stop_btn,
+                                            'pause_btn': pause_btn,
+                                            'restore_btn': restore_btn,
+                                            'edit_btn': edit_btn,
+                                            'del_btn': del_btn,
+                                        }
 
-                                    # 将按钮的引用存储到 self.tab_buttons 中
-                                    self.tab_buttons[tab.name] = {
-                                        'start_btn': start_btn,
-                                        'stop_btn': stop_btn,
-                                        'pause_btn': pause_btn,
-                                        'restore_btn': restore_btn,
-                                        'edit_btn': edit_btn,
-                                        'del_btn': del_btn,
-                                    }
+                                        if self.target_running[tab.name]:
+                                            start_btn.classes(add='hidden')
+                                            stop_btn.classes(remove='hidden')
+                                            pause_btn.classes(remove='hidden')
+                                            edit_btn.classes(add='hidden')
+                                            del_btn.classes(add='hidden')
 
-                                    if self.target_running[tab.name]:
-                                        start_btn.classes(add='hidden')
-                                        stop_btn.classes(remove='hidden')
-                                        pause_btn.classes(remove='hidden')
-                                        edit_btn.classes(add='hidden')
-                                        del_btn.classes(add='hidden')
-                                    ui.space()
-                                    ui.select({10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR'},
-                                              value=20, label='日志级别',
-                                              on_change=lambda level, t=tab.name: self.log_manager.set_level(t, level.value)
-                                              ).classes('w-20')
+                                        ui.space()
+                                        ui.select({10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR'},
+                                                  value=20, label='日志级别',
+                                                  on_change=lambda level, t=tab.name: self.log_manager.set_level(t, level.value)
+                                                  ).classes('w-32')
 
-                                    self._create_configuration_tabs(tab.name)
+                                        self._create_configuration_tabs(tab.name)
 
-                            with ui.column().classes('h-full').style('width:31vw;height:37vw;overflow-y:auto;'):
-                                self.log_manager.get_logger(tab.name)
+                                # 日志区域
+                                with ui.column().classes('h-full').style('width:100%;height:37vw;overflow-y:auto;'):
+                                    self.log_manager.get_logger(tab.name)
+                        else:
+                            # 横屏保持原有布局
+                            with ui.row().classes('w-full h-full'):
+                                with ui.column().classes('h-full').style('width:60%'):
+                                    with ui.row().classes('w-full h-full items-center'):
+                                        start_btn = ui.button('启动', icon='start', on_click=lambda t=tab.name: self.start(t)).props('color=green')
+                                        stop_btn = ui.button('停止', icon='stop', on_click=lambda t=tab.name: self.stop(t)).props('color=red').classes('hidden')
+                                        pause_btn = ui.button('暂停', icon='pause', on_click=lambda t=tab.name: self.pause(t)).props('color=orange').classes('hidden')
+                                        restore_btn = ui.button('恢复', icon='restore', on_click=lambda t=tab.name: self.restore(t)).props('color=green').classes('hidden')
+                                        edit_btn = ui.button('修改', icon='edit', on_click=lambda t=tab.name: self.update_tab(t))
+                                        del_btn = ui.button('删除', icon='delete_forever', on_click=lambda t=tab.name: self.remove_tab(t))
+
+                                        self.tab_buttons[tab.name] = {
+                                            'start_btn': start_btn,
+                                            'stop_btn': stop_btn,
+                                            'pause_btn': pause_btn,
+                                            'restore_btn': restore_btn,
+                                            'edit_btn': edit_btn,
+                                            'del_btn': del_btn,
+                                        }
+
+                                        if self.target_running[tab.name]:
+                                            start_btn.classes(add='hidden')
+                                            stop_btn.classes(remove='hidden')
+                                            pause_btn.classes(remove='hidden')
+                                            edit_btn.classes(add='hidden')
+                                            del_btn.classes(add='hidden')
+                                        ui.space()
+                                        ui.select({10: 'DEBUG', 20: 'INFO', 30: 'WARNING', 40: 'ERROR'},
+                                                  value=20, label='日志级别',
+                                                  on_change=lambda level, t=tab.name: self.log_manager.set_level(t, level.value)
+                                                  ).classes('w-20')
+
+                                        self._create_configuration_tabs(tab.name)
+
+                                with ui.column().classes('h-full').style('width:31vw;height:37vw;overflow-y:auto;'):
+                                    self.log_manager.get_logger(tab.name)
 
                 with ui.tab_panel(self.add_tab):
                     with ui.column().classes('w-full'):
                         self.new_tab_input = ui.input('名称', placeholder='输入名称')
                         ui.button('添加', on_click=self.add_table)
+
 
     def start(self, tab_name):
         if self.target_running[tab_name]:
@@ -299,11 +367,25 @@ class GuiApp:
             classes='multi-line-notification',
         )
 
+    def check_path(self):
+        root_path = Path(__file__).parent
+        path_str = str(root_path)
+        if any('\u4e00' <= char <= '\u9fff' for char in path_str):
+            with ui.dialog().props('backdrop-filter="blur(8px) brightness(60%)"') as dialog:
+                ui.label('检测到软件路径含有中文\n请将软件移动到无中文路径下').classes('text-3xl text-white whitespace-pre-line text-center')
+
+            dialog.on('escape-key', lambda: ui.notify('ESC pressed'))
+            dialog.open()
+
     def run(self):
         """启动应用"""
         app.on_startup(self.on_startup)
         app.on_shutdown(self.on_close)
         self.load_tabs()
         self.check_update()
-        # , on_air="MA6Q0Bb9rAmLQqVX"
-        ui.run(native=True, window_size=(1280, 720), language='zh-CN', title='Nova-AutoScript', favicon='🔧', reload=False)
+        self.check_path()
+        # on_air="MA6Q0Bb9rAmLQqVX"
+        if self.conf.on_air:
+            ui.run(native=True, window_size=WINDOW_SIZE[self.conf.window_size], language='zh-CN', title='Nova-AutoScript', favicon='🔧', reload=False, on_air=self.conf.on_air_token)
+        else:
+            ui.run(native=True, window_size=WINDOW_SIZE[self.conf.window_size], language='zh-CN', title='Nova-AutoScript', favicon='🔧', reload=False)

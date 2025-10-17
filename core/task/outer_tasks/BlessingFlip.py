@@ -67,7 +67,7 @@ class BlessingFlip(TaskBase):
 
     async def prepare(self):
         await super().prepare()
-        self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 开始执行 >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
@@ -78,13 +78,13 @@ class BlessingFlip(TaskBase):
                 self.logging.log(f"第 {i} 轮游戏完成 <<<", self.target)
                 await asyncio.sleep(3)
         except Exception as e:
-            self.logging.log(f'{TASK_NAME} 失败 <<<', self.target)
+            self.logging.log(f'任务 {TASK_NAME} 失败 <<<', self.target)
             self._update_status(FAILED)
             raise e
 
     async def cleanup(self):
         await super().cleanup()
-        self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 执行完成 <<<", self.target)
 
     def get_card_position(self, row, col):
         x = self.x_start + col * (self.card_width + self.x_gap) + self.card_width // 2

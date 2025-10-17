@@ -11,7 +11,7 @@ from core.LogManager import LogManager
 
 
 class AdbClient:
-    def __init__(self, name, ip="127.0.0.1", port=5555, adb_path=None, max_retries=3, retry_delay=2):
+    def __init__(self, name, ip="127.0.0.1", port=5555, adb_path=None, max_retries=3, retry_delay=3):
         """
         初始化AdbClient实例。
         :param ip: 设备IP地址，默认为None。
