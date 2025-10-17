@@ -9,16 +9,7 @@ TASK_NAME = "订单"
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 # 切换天赋所需模版
-TO_SYSTEM = Template(
-    name="系统按钮",
-    threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/button/button_system.png"
-)
-MORE_SYSTEM = Template(
-    name="系统更多",
-    threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/button/button_more_system.png"
-)
+
 TO_TALENT = Template(
     name="天赋按钮",
     threshold=0.85,
@@ -208,7 +199,7 @@ class Order(TaskBase):
 
     async def prepare(self):
         await super().prepare()
-        self.logging.log(f"{TASK_NAME} 开始执行: policy={self.order_policy} hasten_policy={self.order_hasten_policy} 次数={self.module.order_times} >>>", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 开始执行 >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
@@ -216,7 +207,7 @@ class Order(TaskBase):
 
     async def cleanup(self):
         await super().cleanup()
-        self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 执行完成 <<<", self.target)
 
     async def start(self):
         order_times = self.module.order_times
@@ -245,7 +236,7 @@ class Order(TaskBase):
         # 第二步： 进行订单（生产）及提交 (需要手动确认加速足够多？)
         if '订单电路板' in self.order_hasten_policy:  # 需要提前计算好PCBA的数量？
             self.logging.log(f"{TASK_NAME} 使用电路板 <<<", self.target, logging.DEBUG)
-            await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
+            await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
             await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
             await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
             if await self.control.await_element_appear(PCBA_INSUFFICIENT, time_out=2):
@@ -257,8 +248,7 @@ class Order(TaskBase):
         if '使用制造加速' in self.order_hasten_policy:
             self.logging.log(f"{TASK_NAME} 使用制造加速 <<<", self.target, logging.DEBUG)
             if not (await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=1) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=1)):
-                raise OrderFinishes("无法找到系统界面,订单结束")
-
+                await self.return_home()
             await self.control.await_element_appear(ECONOMY, click=True, time_out=1)
             if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
                 await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
@@ -294,13 +284,19 @@ class Order(TaskBase):
                 else:
                     await self.device.click_back()
                     await self.return_home()
+            else:
+                if self.order_policy == "不使用超空间信标":
+                    await self.return_home()
+                    raise OrderFinishes("不使用超空间信标,订单结束 <<<")
+                else:
+                    await self.device.click_back()
 
         # 第三步： 切换天赋至 -Time
         await self.change_talent(TALENT_TIME)
 
         # 第四步： 获取新订单 （需要确认加速获取订单的规则）
         self.logging.log(f"{TASK_NAME} 获取新订单 >>>", self.target, logging.DEBUG)
-        await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
+        await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
         await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
         await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
@@ -321,8 +317,8 @@ class Order(TaskBase):
 
     async def change_talent(self, mode):
         self.logging.log(f"{TASK_NAME} 修改天赋至{mode.name} <<<", self.target, logging.DEBUG)
-        await self.control.await_element_appear(TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_element_appear(MORE_SYSTEM, click=True, time_out=3)
+        await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
+        await self.control.await_element_appear(Templates.MORE_SYSTEM, click=True, time_out=3)
         await self.control.await_element_appear(TO_TALENT, click=True, time_out=3)
         await self.control.await_element_appear(TALENT_CHOICE, click=True, time_out=3)
         await self.control.await_element_appear(mode, click=True, time_out=3)

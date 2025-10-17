@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 import cv2
+from mmumu.api import get_mumu_path
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
@@ -232,14 +233,20 @@ class DeviceUtils:
     async def start_simulator(self):
         try:
             # "D:/Software/MuMuPlayer-12.0/nx_main/MuMuManager.exe control -v 0 launch"
-            if self.conf.simulator_path:
-                subprocess.Popen([self.conf.simulator_path, "control", "-v", str(self.module.simulator_index), "launch"],
+            mumu_path = get_mumu_path()
+            if mumu_path:
+                manager_path = Path(mumu_path) / 'nx_main/MuMuManager.exe'
+                if not manager_path.exists():
+                    raise FileNotFoundError(f"文件 {manager_path} 不存在")
+                subprocess.Popen([manager_path, "control", "-v", str(self.module.simulator_index), "launch"],
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
                                  stdin=subprocess.PIPE,
                                  encoding="utf-8",
                                  shell=False)
                 self.logging.log("启动模拟器成功", self.name, logging.INFO)
+                await asyncio.sleep(10)
+                await self.async_init()
             else:
                 self.logging.log("模拟器路径未设置", self.name, logging.ERROR)
                 raise Exception("模拟器路径未设置")

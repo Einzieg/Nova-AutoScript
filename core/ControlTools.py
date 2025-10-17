@@ -29,7 +29,7 @@ class ControlTools:
             (1680, 250, 1920, 750)  # 右侧活动及快捷菜单
         ]
 
-    async def matching_one(self, template: Template, click=False, sleep=0.3, offset_x=0, offset_y=0):
+    async def matching_one(self, template: Template, click=False, sleep=0.5, offset_x=0, offset_y=0):
         image = self.device.get_screencap()
         cv_tmp = template.cv_tmp
 
@@ -116,7 +116,7 @@ class ControlTools:
                 new_coordinates.append([new_x, new_y])
         return new_coordinates
 
-    async def await_element_appear(self, template: Template, click=False, time_out=60, sleep=0.3, offset_x=0, offset_y=0):
+    async def await_element_appear(self, template: Template, click=False, time_out=60, sleep=1, offset_x=0, offset_y=0):
         start_time = time.time()
         while time.time() - start_time < time_out:
             coordinate = await self.matching_one(template, click=click, sleep=sleep, offset_x=offset_x, offset_y=offset_y)

@@ -5,6 +5,7 @@ from nicegui import ui
 from core.task.daily_tasks.Order import Order
 from core.task.daily_tasks.Radar import Radar
 from core.task.outer_tasks.BlessingFlip import BlessingFlip
+from core.task.test_tasks.ChangeAlloys import ChangeAlloys
 from core.task.test_tasks.ScreenshotTest import ScreenshotTest
 from models.Module import Module
 
@@ -23,7 +24,7 @@ class GuiAppConfigurationTabs:
             outer = ui.tab('其他任务')
             quick = ui.tab('快速执行')
 
-        with ui.tab_panels(tabs, value=basic).classes('w-full').style('height:26vw;overflow-y:auto;'):
+        with ui.tab_panels(tabs, value=basic).classes('w-full').style('height:26vw;overflow-y:auto;' if self.app.conf.window_size != 1 else 'max-height:40vh;overflow-y:auto;'):
             module = Module.get_or_none(Module.name == tab_name)
 
             with ui.tab_panel(basic):
@@ -97,7 +98,7 @@ class GuiAppConfigurationTabs:
                     with ui.row().classes('w-full items-center'):
                         ui.switch(text='联盟商店购买')
                         ui.select(options=['神经插入槽', '维修机器人', '舰长经验', '科研加速', '部件加速', '超空间信标', '跃升元件', '合金', '水晶', '订单电路板'],
-                                  multiple=True)
+                                  multiple=True).classes('w-64').props('use-chips')
                 with ui.card().classes('w-full'):
                     with ui.row().classes('w-full items-center'):
                         ui.switch(text='完成订单')
@@ -203,6 +204,7 @@ class GuiAppConfigurationTabs:
                 ui.button('隐秘', on_click=lambda: self.quick_run(tab_name, Radar)).props('color=green')
                 ui.button('订单', on_click=lambda: self.quick_run(tab_name, Order)).props('color=green')
                 ui.button('截图测试', on_click=lambda: self.quick_run(tab_name, ScreenshotTest)).props('color=green')
+                ui.button('换合金', on_click=lambda: self.quick_run(tab_name, ChangeAlloys)).props('color=green')
 
     def quick_run(self, tab_name, task):
         if self.app.target_running[tab_name]:

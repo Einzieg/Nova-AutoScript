@@ -10,4 +10,4 @@ class Template:
         self.template_path = template_path
         self.cv_tmp = cv2.imread(template_path)
         self.forbidden = forbidden
-        print(f"加载模板:{name} {template_path}")
+        # print(f"加载模板:{name} {template_path}")

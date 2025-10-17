@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import time
 from logging.handlers import TimedRotatingFileHandler
 
 from nicegui import ui
@@ -18,29 +17,12 @@ class LogManager:
     def __init__(self):
         if not hasattr(self, 'initialized'):
             self.loggers = {}
+            self.log_streams = {}  # 保存每个 tab 的日志容器
             self.log_dir = os.path.join(os.getcwd(), 'logs')
             if not os.path.exists(self.log_dir):
                 os.makedirs(self.log_dir)
 
-            # 初始化时清理过期日志（保险措施，TimedRotatingFileHandler 也会做清理）
-            # self.cleanup_old_logs(days=7)
-
             self.initialized = True
-
-    def cleanup_old_logs(self, days=7):
-        """删除指定天数之前的日志文件"""
-        now = time.time()
-        expire_time = days * 24 * 60 * 60  # 秒数
-
-        for filename in os.listdir(self.log_dir):
-            filepath = os.path.join(self.log_dir, filename)
-            if os.path.isfile(filepath) and filename.endswith(".log"):
-                file_mtime = os.path.getmtime(filepath)
-                if now - file_mtime > expire_time:
-                    try:
-                        os.remove(filepath)
-                    except Exception:
-                        pass
 
     def get_logger(self, tab_name):
         """获取指定 tab_name 的 logger"""
@@ -49,6 +31,7 @@ class LogManager:
             logger.setLevel(logging.INFO)  # 默认日志级别
 
             log_stream = ui.log(max_lines=1000).classes('h-full w-full')
+            self.log_streams[tab_name] = log_stream
 
             class UIStreamHandler(logging.Handler):
                 def emit(self, record):
@@ -87,6 +70,11 @@ class LogManager:
         """设置指定 tab_name 的日志级别"""
         logger = self.get_logger(tab_name)
         logger.setLevel(level)
+
+    def clear_logs(self, tab_name):
+        """清空指定 tab 的日志容器"""
+        if tab_name in self.log_streams:
+            self.log_streams[tab_name].clear()
 
     def clear(self):
         self.loggers = {}

@@ -4,12 +4,11 @@ import logging
 import traceback
 
 from core.LogManager import LogManager
-from core.NovaException import TaskFinishes
+from core.NovaException import NovaException
 from core.task.daily_tasks.Order import Order
 from core.task.daily_tasks.Radar import Radar
 from core.task.permanent_tasks.Permanent import Permanent
 from core.task.permanent_tasks.Start import Start
-
 from models import Module
 
 
@@ -61,10 +60,14 @@ class MainProcess:
         pass
 
     async def quick_run(self, task):
+        self.tasks = [
+            Start(self.target, True)
+        ]
         self.tasks.append(task(self.target))
         await self.start()
 
     async def start(self):
+        self.logging.clear_logs(self.target)
         try:
             for task in self.tasks:
                 await task.prepare()
@@ -76,6 +79,9 @@ class MainProcess:
             self.app.stop(self.target)
         except asyncio.CancelledError:
             self.logging.log(f"线程 [{self.target}] 停止", self.target)
+        except NovaException as e:
+            self.logging.log(f"线程 [{self.target}] 停止: {e}", self.target)
+            self.app.stop(self.target)
         except Exception as e:
             self.logging.log(f"线程 [{self.target}] 执行异常: {e}", self.target, logging.ERROR)
             self.logging.log(traceback.format_exc(), self.target, logging.ERROR)

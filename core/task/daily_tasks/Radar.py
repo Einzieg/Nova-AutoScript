@@ -54,7 +54,7 @@ class Radar(TaskBase):
 
     async def prepare(self):
         await super().prepare()
-        self.logging.log(f"{TASK_NAME} 开始执行 >>>", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 开始执行 >>>", self.target)
 
     async def execute(self):
         self._update_status(RUNNING)
@@ -63,10 +63,11 @@ class Radar(TaskBase):
     async def cleanup(self):
         await super().cleanup()
         await self.return_home()
-        self.logging.log(f"{TASK_NAME} 执行完成 <<<", self.target)
+        self.logging.log(f"任务 {TASK_NAME} 执行完成 <<<", self.target)
 
     async def start(self):
         hidden_times = self.module.hidden_times
+        # TODO : 每寰宇日把能量打满
         hidden_wreckage = self.module.hidden_wreckage
         try:
             if hidden_times:
@@ -83,7 +84,7 @@ class Radar(TaskBase):
     async def radar_process(self):
         await self.control.await_element_appear(RADAR, click=True, time_out=3)
         await self.control.await_element_appear(SEARCH, click=True, time_out=3)
-        if await self.control.await_element_appear(Templates.ATTACK_BUTTON, time_out=3):
+        if await self.control.await_element_appear(Templates.ATTACK_BUTTON, time_out=2):
             await self.attack()
             return
         if await self.control.await_element_appear(BUTTON_USE, click=True, time_out=2) | await self.control.await_element_appear(BUTTON_BUY, click=True, time_out=2):
