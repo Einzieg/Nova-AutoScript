@@ -2,6 +2,8 @@ name: Build and Release (Windows)
 
 on:
   push:
+    branches:
+      - 'master'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -21,64 +23,55 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Cache pip
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Cache uv
         uses: actions/cache@v4
         with:
-          path: ~\AppData\Local\pip\Cache
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-uv-
 
-      - name: Upgrade pip and build tools
+      - name: 安装依赖项
         run: |
-          python -m pip install --upgrade pip wheel setuptools
+          uv init \
+          uv sync
 
-      - name: Install dependencies
+      - name: 使用 PyInstaller 构建（规范）
         run: |
-          pip install \
-            numpy==2.2.4 \
-            nicegui==2.13.0 \
-            opencv_python==4.11.0.86 \
-            pywebview==5.4 \
-            peewee==3.17.9 \
-            rapidocr_onnxruntime==1.4.4 \
-            rapidocr==2.0.6 \
-            pyinstaller>=6.13.0 \
-            git+https://github.com/Einzieg/mtc \
-            git+https://github.com/Einzieg/msc
-
-      - name: Build with PyInstaller (spec)
-        run: |
-          pyinstaller main.spec
+          uv run pyinstaller main.spec
 
       - name: List dist
         run: |
           Get-ChildItem -Recurse dist | Format-List
 
-      - name: Determine version and package
+      - name: 确定版本和包
         id: pkg
         run: |
           $tag = if ("${{ github.ref_type }}" -eq 'tag') { "${{ github.ref_name }}" } else { "manual" }
           $version = $tag.TrimStart('v')
           # Default artifact folder name from spec
-          $defaultFolder = Join-Path "dist" "NovaAutoScript-0.21.3"
+          $defaultFolder = Join-Path "dist" "NovaAutoScript"
           if (-Not (Test-Path $defaultFolder)) {
             # Fallback to first directory in dist
             $firstDir = Get-ChildItem dist -Directory | Select-Object -First 1
-            if ($null -eq $firstDir) { throw "No build output found under dist" }
+            if ($null -eq $firstDir) { throw "在 dist 下找不到构建输出" }
             $defaultFolder = $firstDir.FullName
           }
           $zipName = "NovaAH-windows-$version.zip"
           Compress-Archive -Path "$defaultFolder/*" -DestinationPath $zipName -Force
           Write-Output "zip=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
-      - name: Upload artifact
+      - name: 上传项目
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.pkg.outputs.zip }}
           path: ${{ steps.pkg.outputs.zip }}
 
-      - name: Create GitHub Release
+      - name: 创建 GitHub 发布
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
@@ -89,5 +82,3 @@ jobs:
           prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-

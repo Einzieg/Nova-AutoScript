@@ -10,7 +10,7 @@ sys.setrecursionlimit(5000)
 
 a = Analysis(
     ['main.py'],
-    pathex=[r'C:\Users\Einzieg\PycharmProjects\NovaAH\.venv'],
+    pathex=[sys.prefix],
     binaries=[],
     datas=[(f'{Path(nicegui.__file__).parent}', 'nicegui'),
            (f'{Path(msc.__file__).parent}', 'msc'),
@@ -55,5 +55,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='NovaAutoScript-0.21.3',
+    name='NovaAutoScript',
 )
