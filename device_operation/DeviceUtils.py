@@ -248,8 +248,8 @@ class DeviceUtils:
                 await asyncio.sleep(10)
                 await self.async_init()
             else:
-                self.logging.log("模拟器路径未设置", self.name, logging.ERROR)
-                raise Exception("模拟器路径未设置")
+                self.logging.log("未找到模拟器路径", self.name, logging.ERROR)
+                raise Exception("未找到模拟器路径")
         except Exception as e:
             self.logging.log(f"启动模拟器失败: {str(e)}", self.name, logging.ERROR)
             raise

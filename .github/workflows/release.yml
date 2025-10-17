@@ -2,8 +2,6 @@ name: Build and Release (Windows)
 
 on:
   push:
-    branches:
-      - 'master'
     tags:
       - 'v*'
   workflow_dispatch:
@@ -11,6 +9,8 @@ on:
 jobs:
   build-windows:
     runs-on: windows-latest
+    permissions:
+      contents: write
     defaults:
       run:
         shell: pwsh
