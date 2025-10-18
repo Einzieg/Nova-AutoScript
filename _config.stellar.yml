@@ -1,0 +1,27 @@
+logo:
+  icon: /assets/icon.svg
+  title: Nova-AS
+  subtitle: 'Nova-AutoScript | 使用说明书'
+menubar:
+  items: []
+site_tree:
+  home:
+    sidebar: starter, welcome, recent
+  index_blog:
+    sidebar: starter, welcome, recent
+  index_topic:
+    menu_id: topic
+  topic:
+    menu_id: topic
+
+article:
+  share: [wechat, weibo, email, link]
+
+style:
+  border-radius:
+    bar: 4px
+    card: 4px
+    block: 4px
+  font-family:
+    logo: 'HarmonyOS_Regular'
+    body: 'HarmonyOS_Regular'
