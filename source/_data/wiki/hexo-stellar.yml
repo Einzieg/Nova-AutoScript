@@ -6,7 +6,7 @@ icon: /assets/icon.svg
 cover: /assets/icon.svg
 coverpage: true
 description: Nova-AutoScript 是基于图像识别 + 模拟控制的自动化应用，解放双手!
-repo: Einzieg/AutoNovaGui
+#repo: Einzieg/AutoNovaGui
 search:
   filter: /
   placeholder: 搜索关键字...
