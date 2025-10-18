@@ -60,8 +60,8 @@ jobs:
             $firstDir = Get-ChildItem dist -Directory | Select-Object -First 1
             if ($null -eq $firstDir) { throw "在 dist 下找不到构建输出" }
             $defaultFolder = $firstDir.FullName
-          }
-          $zipName = "NovaAH-windows-$version.zip"
+          }`
+          $zipName = "Nova-AutoScript-windows-$version.zip"
           Compress-Archive -Path "$defaultFolder/*" -DestinationPath $zipName -Force
           Write-Output "zip=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
