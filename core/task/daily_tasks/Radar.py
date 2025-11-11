@@ -85,7 +85,7 @@ class Radar(TaskBase):
         await self.control.await_element_appear(RADAR, click=True, time_out=3)
         await self.control.await_element_appear(SEARCH, click=True, time_out=3)
         if await self.control.await_element_appear(Templates.ATTACK_BUTTON, time_out=2):
-            await self.attack()
+            await self.attack(sleet_all=True)
             return
         if await self.control.await_element_appear(BUTTON_USE, click=True, time_out=2) | await self.control.await_element_appear(BUTTON_BUY, click=True, time_out=2):
             if self.hidden_policy == "不使用能量道具":
@@ -100,4 +100,4 @@ class Radar(TaskBase):
                 await self.control.await_element_appear(SEARCH, click=True, time_out=1, sleep=1)
             else:
                 raise RadarFinishes("道具耗尽,雷达结束")
-        await self.attack()
+        await self.attack(sleet_all=True)

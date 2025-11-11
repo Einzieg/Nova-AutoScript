@@ -23,14 +23,13 @@ class MainProcess:
         self.logging.log(f"线程 [{self.target}] 初始化", target)
 
     async def run(self):
+        # TODO 一键多线程启动 一键修改配置
         try:
             tasks = json.loads(self.module.task_type)
         except json.JSONDecodeError:
             tasks = []
 
-        self.tasks = [
-            Start(self.target),
-        ]
+        self.tasks.append(Start(self.target))
 
         task_handlers = {
             "outer": self._handle_outer_task,
@@ -77,6 +76,7 @@ class MainProcess:
             await asyncio.sleep(3)
             self.logging.log(f"线程 [{self.target}] 执行结束", self.target)
             self.app.stop(self.target)
+            # TODO 邮件结束通知
         except asyncio.CancelledError:
             self.logging.log(f"线程 [{self.target}] 停止", self.target)
         except NovaException as e:

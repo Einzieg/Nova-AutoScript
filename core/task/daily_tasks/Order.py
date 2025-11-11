@@ -134,11 +134,21 @@ SPEEDUP_PRODUCTION = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/speedup_production.png"
 )
-QHOUR_SPEEDUP = Template(
+_15_MIN_SPEEDUP = Template(
     name="15分加速",
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/15min_speedup.png"
 )
+# _1_HOUR_SPEEDUO = Template(
+#     name="1小时加速",
+#     threshold=0.85,
+#     template_path=ROOT_DIR / "static/novaimgs/order/1hour_speedup.png"
+# )
+# _3_HOUR_SPEEDUO = Template(
+#     name="3小时加速",
+#     threshold=0.85,
+#     template_path=ROOT_DIR / "static/novaimgs/order/3hour_speedup.png"
+# )
 QHOUR_SPEEDUP_OFFSET_X = 500
 QHOUR_SPEEDUP_OFFSET_Y = 15
 USE_SPEEDUP = Template(
@@ -246,6 +256,7 @@ class Order(TaskBase):
             await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
 
         if '使用制造加速' in self.order_hasten_policy:
+            # TODO 使用多种制造加速
             self.logging.log(f"{TASK_NAME} 使用制造加速 <<<", self.target, logging.DEBUG)
             if not (await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=1) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=1)):
                 await self.return_home()
@@ -263,9 +274,9 @@ class Order(TaskBase):
                             break  # 智能生产后依然工厂为空闲，判定为无需继续生产
                         if await self.control.await_element_appear(SPEEDUP_DEPLETED, click=False, time_out=2):
                             raise OrderFinishes("加速道具耗尽,订单结束")
-                        await self.control.await_element_appear(QHOUR_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                        await self.control.await_element_appear(_15_MIN_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
                         await self.control.await_element_appear(USE_SPEEDUP, click=True, time_out=2, offset_x=0, offset_y=0, sleep=1)
-                        await self.control.await_element_appear(QHOUR_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                        await self.control.await_element_appear(_15_MIN_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=2)
                     await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
                     # 提交剩余订单
                     if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
@@ -277,7 +288,7 @@ class Order(TaskBase):
                             else:
                                 await self.device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200)
                                 await asyncio.sleep(2)
-                                await self.control.matching_one(COLLECT_ALL, click=True)
+                                await self.control.matching_one(COLLECT_ALL, click=True, sleep=1)
                                 await self.device.swipe([(1000, 100), (1000, 110), (1000, 150), (1000, 950)], 200)
                                 await asyncio.sleep(2)
                                 await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=3)

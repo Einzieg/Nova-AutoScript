@@ -106,7 +106,7 @@ class TaskBase:
         if await self.control.matching_one(Templates.DISCONNECTED):
             raise TaskFinishes("无法连接到网络")
 
-    async def attack(self):
+    async def attack(self, sleet_all=False):
         self.revenge = False
         await self.control.await_element_appear(Templates.ATTACK_BUTTON, click=True, time_out=3)
         if await self.control.await_element_appear(Templates.REVENGE, time_out=2):
@@ -114,7 +114,7 @@ class TaskBase:
             await self.control.matching_one(Templates.REVENGE_ATTACK, click=True, sleep=1)
         await self.control.matching_one(Templates.REPAIR, click=True, sleep=1)
         fleets = json.loads(self.module.attack_fleet)
-        if "all" in fleets:
+        if "all" in fleets or sleet_all:
             await self.control.await_element_appear(Templates.SELECTALL, click=True, time_out=3, sleep=0.5)
         else:
             for fleet in fleets:

@@ -1,7 +1,6 @@
-import datetime
 import logging
 import os
-from logging.handlers import TimedRotatingFileHandler
+from datetime import datetime
 
 from nicegui import ui
 
@@ -21,7 +20,6 @@ class LogManager:
             self.log_dir = os.path.join(os.getcwd(), 'logs')
             if not os.path.exists(self.log_dir):
                 os.makedirs(self.log_dir)
-
             self.initialized = True
 
     def get_logger(self, tab_name):
@@ -41,21 +39,12 @@ class LogManager:
 
             handler = UIStreamHandler()
             handler.setFormatter(formatter)
-            logger.addHandler(handler)
 
-            date_str = datetime.datetime.now().strftime("%Y-%m-%d")
-            log_file = os.path.join(self.log_dir, f"{date_str}_{tab_name}.log")
-
-            file_handler = TimedRotatingFileHandler(
-                log_file,
-                when="midnight",
-                interval=1,
-                backupCount=7,
-                encoding="utf-8",
-                utc=False
-            )
+            log_file = os.path.join(self.log_dir, f"{datetime.now().strftime('%Y-%m-%d')}_{tab_name}.log")
+            file_handler = logging.FileHandler(log_file, mode='a', encoding='utf-8')
             file_handler.setFormatter(formatter)
 
+            logger.addHandler(handler)
             logger.addHandler(file_handler)
             self.loggers[tab_name] = logger
 

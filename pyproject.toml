@@ -10,9 +10,11 @@ dependencies = [
     "opencv_python==4.11.0.86",
     "pywebview==5.4",
     "peewee==3.17.9",
-    "rapidocr_onnxruntime==1.4.4",
-    "rapidocr==2.0.6",
     "pyinstaller>=6.13.0",
+    "tencentcloud-sdk-python>=3.0.1479",
+    "baidu-aip>=4.16.13",
+    "chardet>=5.2.0",
+    "pydantic-settings>=2.11.0",
     "mtc",
     "msc",
 ]

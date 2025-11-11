@@ -4,3 +4,4 @@
 /logs/
 /test/
 /database/nova_auto_script.db
+.env

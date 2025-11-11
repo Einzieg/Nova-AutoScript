@@ -116,7 +116,7 @@ class ControlTools:
                 new_coordinates.append([new_x, new_y])
         return new_coordinates
 
-    async def await_element_appear(self, template: Template, click=False, time_out=60, sleep=1, offset_x=0, offset_y=0):
+    async def await_element_appear(self, template: Template, click=False, time_out=60, sleep=0.5, offset_x=0, offset_y=0):
         start_time = time.time()
         while time.time() - start_time < time_out:
             coordinate = await self.matching_one(template, click=click, sleep=sleep, offset_x=offset_x, offset_y=offset_y)

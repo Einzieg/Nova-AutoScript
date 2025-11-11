@@ -1,4 +1,5 @@
 import asyncio
+import base64
 
 import cv2
 from msc.minicap import MiniCap
@@ -17,7 +18,7 @@ from mtc.touch import Touch
 
 
 def perform_screencap(controller: ScreenCap):
-    return controller.save_screencap()
+    return controller.screencap()
 
 
 def perform_click(controller: Touch, x, y):
@@ -32,8 +33,15 @@ async def perform_swipe(controller: Touch, points: list, duration: int = 500):
 
 # asyncio.run(perform_swipe(MuMuTouch(6), [(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 500))
 
+def crop_screencap(controller: ScreenCap, x1: int, y1: int, x2: int, y2: int):
+    img = controller.screencap()
+    x_start, x_end = min(x1, x2), max(x1, x2)
+    y_start, y_end = min(y1, y2), max(y1, y2)
+    cropped_img = img[y_start:y_end, x_start:x_end]
+    return cropped_img
 
-perform_screencap(MuMuCap(3))
+
+perform_screencap(MuMuCap(0))
 #
 # img = cv2.imread("screencap.png")
 # cv2.imshow("img", img)

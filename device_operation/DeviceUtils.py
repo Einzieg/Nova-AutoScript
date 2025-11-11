@@ -226,9 +226,14 @@ class DeviceUtils:
             if not self.touch_tool:
                 raise ValueError("触摸工具未初始化")
             await self.__perform_swipe(self.touch_tool, points, duration)
+        except ConnectionAbortedError as e:
+            # 连接异常，重试一次
+            try:
+                await self.__perform_swipe(self.touch_tool, points, duration)
+            except ConnectionAbortedError:
+                raise ConnectionAbortedError("数据传输超时或者协议错误，请检查网络连接")
         except Exception as e:
             self.logging.log(f"滑动时出错: {str(e)}", self.name, logging.ERROR)
-            raise
 
     async def start_simulator(self):
         try:
