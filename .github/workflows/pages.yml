@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - page
+  workflow_dispatch: # 手动触发
 
 permissions:
   contents: read
