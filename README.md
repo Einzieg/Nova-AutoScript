@@ -7,3 +7,12 @@
 ```shell
   uv sync
 ```
+推送标签以执行自动构建
+```shell
+  git tag vx.x.x
+```
+```shell
+  git push origin --tags
+```
+
+
