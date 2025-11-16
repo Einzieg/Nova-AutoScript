@@ -4,8 +4,6 @@ from core.LoadTemplates import Template
 from core.NovaException import OrderFinishes
 from core.task.TaskBase import *
 
-TASK_NAME = "订单"
-
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 # 切换天赋所需模版
@@ -67,12 +65,6 @@ ORDER_CLOSE = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/close_order.png"
 )
-TO_HOME = Template(
-    name="回到首页",
-    threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/button/to_home.png"
-)
-
 # 通过制造提交订单所需模版
 TO_CONTROL_PANEL_GOLD = Template(
     name="空间站管理界面金",
@@ -134,17 +126,18 @@ SPEEDUP_PRODUCTION = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/speedup_production.png"
 )
-_15_MIN_SPEEDUP = Template(
+# clearer name for 15 minute speedup template
+SPEEDUP_15_MIN = Template(
     name="15分加速",
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/15min_speedup.png"
 )
-# _1_HOUR_SPEEDUO = Template(
+# SPEEDUO_1_HOUR = Template(
 #     name="1小时加速",
 #     threshold=0.85,
 #     template_path=ROOT_DIR / "static/novaimgs/order/1hour_speedup.png"
 # )
-# _3_HOUR_SPEEDUO = Template(
+# SPEEDUO_3_HOUR = Template(
 #     name="3小时加速",
 #     threshold=0.85,
 #     template_path=ROOT_DIR / "static/novaimgs/order/3hour_speedup.png"
@@ -196,6 +189,11 @@ COLLECT_ALL = Template(
     threshold=0.85,
     template_path=ROOT_DIR / "static/novaimgs/order/collect_all.png"
 )
+ORDER_FINISH = Template(
+    name="订单完成",
+    threshold=0.85,
+    template_path=ROOT_DIR / "static/novaimgs/order/order_finish.png"
+)
 
 
 class Order(TaskBase):
@@ -226,7 +224,7 @@ class Order(TaskBase):
                 for i in range(order_times):
                     await self.order_process()
             else:
-                for i in range(100):  # 100 orders max per day
+                while True:
                     await self.return_home()
                     await self.order_process()
         except OrderFinishes as e:
@@ -253,7 +251,7 @@ class Order(TaskBase):
                 await self.return_home()
                 raise OrderFinishes("PCBA道具不足")
             await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3)
-            await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
+            await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3)
 
         if '使用制造加速' in self.order_hasten_policy:
             # TODO 使用多种制造加速
@@ -274,17 +272,17 @@ class Order(TaskBase):
                             break  # 智能生产后依然工厂为空闲，判定为无需继续生产
                         if await self.control.await_element_appear(SPEEDUP_DEPLETED, click=False, time_out=2):
                             raise OrderFinishes("加速道具耗尽,订单结束")
-                        await self.control.await_element_appear(_15_MIN_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                        await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
                         await self.control.await_element_appear(USE_SPEEDUP, click=True, time_out=2, offset_x=0, offset_y=0, sleep=1)
-                        await self.control.await_element_appear(_15_MIN_SPEEDUP, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=2)
-                    await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
+                        await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=2)
+                    await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3)
                     # 提交剩余订单
                     if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
                         if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
                             await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
                             if not await self.control.await_element_appear(PRODUCE_ORDER, click=False, time_out=2):
                                 if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
-                                    await self.control.await_element_appear(TO_HOME, click=True, time_out=3)
+                                    await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3)
                             else:
                                 await self.device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200)
                                 await asyncio.sleep(2)
@@ -308,7 +306,9 @@ class Order(TaskBase):
         # 第四步： 获取新订单 （需要确认加速获取订单的规则）
         self.logging.log(f"{TASK_NAME} 获取新订单 >>>", self.target, logging.DEBUG)
         await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
+        await self.control.await_element_appear(TO_ORDER, click=True, time_out=3, sleep=3)
+        if self.control.matching_one(ORDER_FINISH):
+            raise OrderFinishes("今日订单已完成 <<<")
         await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
         await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
 
@@ -318,6 +318,7 @@ class Order(TaskBase):
                 raise OrderFinishes("不使用超空间信标,订单结束 <<<")
             if await self.control.await_element_appear(GEC_ORDER, click=False, time_out=3):
                 if self.order_policy == "使用GEC购买信标":
+                    await self.control.await_element_appear(BEACON_ORDER, click=True, time_out=3)
                     await self.control.await_element_appear(GEC_ORDER, click=True, time_out=1)
                 else:
                     await self.return_home()
@@ -334,4 +335,4 @@ class Order(TaskBase):
         await self.control.await_element_appear(TALENT_CHOICE, click=True, time_out=3)
         await self.control.await_element_appear(mode, click=True, time_out=3)
         await self.control.await_element_appear(CONFIRM_TALENT, click=True, time_out=3, sleep=1)
-        await self.control.await_element_appear(TO_HOME, click=True, time_out=3, sleep=1)
+        await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3, sleep=1)
