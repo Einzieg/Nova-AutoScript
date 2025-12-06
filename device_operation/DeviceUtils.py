@@ -194,6 +194,7 @@ class DeviceUtils:
                 self.logging.log(f"{self.conf.cap_tool} 截图失败, 重试 {attempt + 1}: {str(e)}", self.name, logging.ERROR)
                 if attempt == max_retries - 1:
                     raise
+        return None
 
     def save_screencap(self, filename: str = "screenshot.png"):
         """保存截图到指定路径"""

@@ -8,7 +8,6 @@ from app.GuiApp import GuiApp
 from database.db_session import init_database
 
 
-
 def log_init():
     log_dir = os.path.join(os.getcwd(), 'logs')
     if not os.path.exists(log_dir):
@@ -41,7 +40,6 @@ if __name__ == "__main__":
     environ_init()
     # 初始化数据库
     init_database()
-
 
 if __name__ in {"__main__", "__mp_main__"}:
     application = GuiApp()

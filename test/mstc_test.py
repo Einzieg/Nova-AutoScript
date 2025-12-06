@@ -21,6 +21,10 @@ def perform_screencap(controller: ScreenCap):
     return controller.screencap()
 
 
+def save_screencap(controller: ScreenCap):
+    return controller.save_screencap()
+
+
 def perform_click(controller: Touch, x, y):
     controller.click(x, y)
 
@@ -41,7 +45,8 @@ def crop_screencap(controller: ScreenCap, x1: int, y1: int, x2: int, y2: int):
     return cropped_img
 
 
-perform_screencap(MuMuCap(0))
+save_screencap(MuMuCap(2))
+# perform_screencap(MuMuCap(0))
 #
 # img = cv2.imread("screencap.png")
 # cv2.imshow("img", img)

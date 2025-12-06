@@ -23,9 +23,9 @@ def perform_click(controller: Touch, x, y):
 
 
 def matching_one():
-    img = perform_screencap(MuMuCap(3))
+    img = perform_screencap(MuMuCap(4))
     # temp = cv2.imread(r"../static/novaimgs/alliance/donation/donate.png")
-    temp = cv2.imread("leader_lv6.png")
+    temp = cv2.imread("../static/novaimgs/order/order_finish.png")
 
     result = cv2.matchTemplate(img, temp, cv2.TM_CCOEFF_NORMED)
     # 获取到小图的尺寸
@@ -96,8 +96,8 @@ def non_max_suppression(boxes, overlap_thresh=0.5):
 
 
 def matching_more():
-    img = perform_screencap(MuMuCap(0))
-    temp = cv2.imread("../static/novaimgs/acquisition/alloy_wreckage.png")
+    img = perform_screencap(MuMuCap(4))
+    temp = cv2.imread("../static/novaimgs/order/order_finish.png")
     result = cv2.matchTemplate(img, temp, cv2.TM_CCOEFF_NORMED)
     threshold = 0.75
     locations = np.where(result >= threshold)

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     YOUDAO_APP_ID: str
     YOUDAO_APP_SECRET: str
 
+    ZHYUNXI_API_KEY: str
+    ZHYUNXI_API_ID: int
+    ZHYUNXI_API_URL: str
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(BASE_DIR, '.env'),
         env_file_encoding='utf-8',

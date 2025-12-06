@@ -66,13 +66,15 @@ class GuiAppSetting:
                 email = ui.input('邮箱地址', placeholder='请输入邮箱地址', value=self.conf.email)
                 password = ui.input('邮箱密码/授权码', placeholder='请输入邮箱密码', password=True, value=self.conf.password)
                 receiver = ui.input('收件人邮箱', placeholder='请输入收件人邮箱', value=self.conf.receiver)
-            # with ui.row().classes('items-center'):
-            #     ui.label('模拟器配置:').classes('text-xl')
-            #     simulator_path = ui.input(label='MuMu模拟器路径', value=self.conf.simulator_path).style('width: 400px')
+
             with ui.row().classes('items-center'):
                 ui.label('操作设置:').classes('text-xl')
                 cap_tool = ui.select(label='截图工具', options=['MuMu', 'MiniCap', 'DroidCast', 'ADB'], value=self.conf.cap_tool).classes('w-32')
                 touch_tool = ui.select(label='点击工具', options=['MuMu', 'MiniTouch', 'MaaTouch', 'ADB'], value=self.conf.touch_tool).classes('w-32')
+
+            with ui.row().classes('items-center'):
+                ui.label('OCR设置:').classes('text-xl')
+                ocr_tool = ui.select(label='OCR API', options=['有道', '云析'], value=self.conf.ocr_tool).classes('w-64')
 
             with ui.row().classes('w-full items-center'):
                 ui.button('保存设置', on_click=lambda: _save_settings()).props('color=primary')
@@ -86,9 +88,9 @@ class GuiAppSetting:
                 Config.update(email=email.value,
                               password=password.value,
                               receiver=receiver.value,
-                              # simulator_path=simulator_path.value,
                               cap_tool=cap_tool.value,
                               touch_tool=touch_tool.value,
+                              ocr_tool=ocr_tool.value,
                               window_size=window_size.value,
                               on_air=on_air.value,
                               on_air_token=on_air_token.value,

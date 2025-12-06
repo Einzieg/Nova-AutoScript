@@ -2,12 +2,13 @@ import asyncio
 import json
 import logging
 
-from core.ControlTools import ControlTools
+from core.tools.ControlTools import ControlTools
 from core.LoadTemplates import Templates
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
 from device_operation.DeviceUtils import DeviceUtils
 from models.Module import Module
+from models.Config import Config
 
 WAITING = 0
 RUNNING = 1
@@ -34,6 +35,7 @@ class TaskBase:
 
         self.control = ControlTools(target, self.device)
         self.module = Module.get(Module.name == target)
+        self.config = Config.get_or_create(id=1)[0]
 
     async def prepare(self):
         """任务前置操作"""

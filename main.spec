@@ -5,8 +5,32 @@ from pathlib import Path
 import msc
 import mtc
 import nicegui
+import rapidocr_onnxruntime
 
 sys.setrecursionlimit(5000)
+
+# -- rapidocr ONNX runtime model files inclusion --
+block_cipher = None
+
+rapidocr_package_name = 'rapidocr_onnxruntime'
+rapidocr_dir = Path(rapidocr_onnxruntime.__file__).resolve().parent
+
+onnx_paths = list(rapidocr_dir.rglob('*.onnx'))
+yaml_paths = list(rapidocr_dir.rglob('*.yaml'))
+
+onnx_add_data = [(str(v.parent), f'{rapidocr_package_name}/{v.parent.name}')
+                 for v in onnx_paths]
+
+yaml_add_data = []
+for v in yaml_paths:
+    if rapidocr_package_name == v.parent.name:
+        yaml_add_data.append((str(v.parent / '*.yaml'), rapidocr_package_name))
+    else:
+        yaml_add_data.append(
+            (str(v.parent / '*.yaml'), f'{rapidocr_package_name}/{v.parent.name}'))
+
+rapidocr_data = list(set(yaml_add_data + onnx_add_data))
+# -- end rapidocr ONNX runtime model files inclusion --
 
 a = Analysis(
     ['main.py'],
@@ -15,7 +39,8 @@ a = Analysis(
     datas=[(f'{Path(nicegui.__file__).parent}', 'nicegui'),
            (f'{Path(msc.__file__).parent}', 'msc'),
            (f'{Path(mtc.__file__).parent}', 'mtc'),
-           ("static", "static")],
+           ("static", "static"),
+           rapidocr_data],
     hiddenimports=['nicegui', 'cv2', 'msc', 'mtc'],
     hookspath=[],
     hooksconfig={},

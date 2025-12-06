@@ -49,6 +49,8 @@ class Module(Model):
 
     order_hasten_policy = CharField(default="使用制造加速")  # 加速策略  (使用订单电路板/使用制造加速)
 
+    order_speeduo_policy = CharField(default='["15_min"]')  # 加速使用策略 (15_min/1_hour/3_hour)
+
     order_times = IntegerField(null=True)  # 订单次数
 
     class Meta:

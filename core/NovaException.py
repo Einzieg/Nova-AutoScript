@@ -32,7 +32,7 @@ class OrderFinishes(NovaException):
 
     def __str__(self):
         return self.message
-    
+
 
 class PermPirateFinishes(NovaException):
     def __init__(self, message="常驻海盗结束"):

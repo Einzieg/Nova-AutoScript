@@ -150,13 +150,18 @@ class GuiAppConfigurationTabs:
                               value=bool(module.wreckage)
                               )
             with ui.tab_panel(events):
-                ui.label('活动 tab')
+                ui.label('活动')
             with ui.tab_panel(outer):
                 with ui.card().classes('w-full h-full'):
-                    ui.switch(text='刷隐秘',
-                              on_change=lambda e: Module.update(hidden_switch=e.value).where(Module.name == tab_name).execute(),
-                              value=bool(module.hidden_switch)
-                              )
+                    with ui.row().classes('w-full items-center'):
+                        ui.switch(text='刷隐秘',
+                                  on_change=lambda e: Module.update(hidden_switch=e.value).where(Module.name == tab_name).execute(),
+                                  value=bool(module.hidden_switch)
+                                  )
+                        ui.switch(text='采集残骸（开发中）',
+                                  on_change=lambda e: Module.update(hidden_wreckage=e.value).where(Module.name == tab_name).execute(),
+                                  value=bool(module.hidden_wreckage)
+                                  )
                     with ui.row().classes('w-full h-full items-center'):
                         ui.select(label='隐秘策略',
                                   options=['不使用能量道具', '使用能量道具', '使用GEC购买能量'],
@@ -168,10 +173,6 @@ class GuiAppConfigurationTabs:
                                   on_change=lambda e: Module.update(hidden_times=e.value).where(Module.name == tab_name).execute(),
                                   value=module.hidden_times
                                   ).classes('w-48')
-                        ui.switch(text='采集残骸',
-                                  on_change=lambda e: Module.update(hidden_wreckage=e.value).where(Module.name == tab_name).execute(),
-                                  value=bool(module.hidden_wreckage)
-                                  )
                 with ui.card().classes('w-full h-full'):
                     ui.switch(text='做订单',
                               on_change=lambda e: Module.update(order_switch=e.value).where(Module.name == tab_name).execute(),
@@ -183,11 +184,18 @@ class GuiAppConfigurationTabs:
                                   on_change=lambda e: Module.update(order_policy=e.value).where(Module.name == tab_name).execute(),
                                   value=module.order_policy
                                   ).classes('w-38')
-                        ui.select(label='加速策略',
+                        ui.select(label='生产策略',
                                   options=['使用订单电路板', '使用制造加速'],
                                   on_change=lambda e: Module.update(order_hasten_policy=e.value).where(Module.name == tab_name).execute(),
                                   value=module.order_hasten_policy
                                   ).classes('w-38')
+                        ui.select(
+                            label='加速策略(顺序即为优先级)',
+                            options={'15_min': '15分钟', '1_hour': '1小时', '3_hour': '3小时'},
+                            on_change=lambda e: Module.update(order_speeduo_policy=json.dumps(e.value)).where(Module.name == tab_name).execute(),
+                            value=json.loads(module.order_speeduo_policy),
+                            multiple=True
+                        ).classes('w-64').props('use-chips')
                         ui.number(label='订单次数',
                                   placeholder='默认不限制次数',
                                   on_change=lambda e: Module.update(order_times=e.value).where(Module.name == tab_name).execute(),
@@ -195,8 +203,7 @@ class GuiAppConfigurationTabs:
                                   ).classes('w-36')
                 with ui.card().classes('w-full h-full'):
                     with ui.row().classes('w-full h-full items-center'):
-                        ui.switch(text='制造维修机器人'
-                                  )
+                        ui.switch(text='制造维修机器人')
                         ui.number()
                         ui.label('批次')
             with ui.tab_panel(quick):
