@@ -11,14 +11,19 @@ dependencies = [
     "pywebview==5.4",
     "peewee==3.17.9",
     "pyinstaller>=6.13.0",
-    "tencentcloud-sdk-python>=3.0.1479",
-    "baidu-aip>=4.16.13",
     "chardet>=5.2.0",
     "pydantic-settings>=2.11.0",
     "mtc",
     "msc",
+    "rapidocr-onnxruntime>=1.4.4",
+    "onnxruntime>=1.20.0",
 ]
 
 [tool.uv.sources]
 mtc = { git = "https://github.com/Einzieg/mtc" }
 msc = { git = "https://github.com/Einzieg/msc" }
+
+[project.optional-dependencies]
+gpu = [
+    "onnxruntime-gpu>=1.20.0",
+]

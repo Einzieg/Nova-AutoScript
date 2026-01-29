@@ -16,7 +16,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 TO_TALENT = Template(
     name="天赋按钮",
     threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/talent/to_talent.png"
+    template_path=ROOT_DIR / "static/novaimgs/system/talent.png"
 )
 TALENT_CHOICE = Template(
     name="天赋选择",
@@ -43,7 +43,7 @@ CONFIRM_TALENT = Template(
 TO_ORDER = Template(
     name="订单按钮",
     threshold=0.85,
-    template_path=ROOT_DIR / "static/novaimgs/order/to_order.png"
+    template_path=ROOT_DIR / "static/novaimgs/system/orders.png"
 )
 PCBA_DELIVERY = Template(
     name="PCBA提交",
@@ -342,6 +342,7 @@ class Order(TaskBase):
                             "1_hour": self.str2int(self.get_next_element(fabricate_ocr['texts'], "1小时部件加速")),
                             "3_hour": self.str2int(self.get_next_element(fabricate_ocr['texts'], "3小时部件加速"))
                         }
+                        self.logging.log(props_remaining, self.target, logging.DEBUG)
 
                         for speeduo_policy in self.order_speeduo_policy:
                             if fabricate_time >= SPEEDUP_SECOND[speeduo_policy]:
@@ -356,11 +357,6 @@ class Order(TaskBase):
                                     break
                                 # 如果当前策略阈值满足但对应道具没有库存，尝试下一个策略
                                 continue
-
-                        # # 没有任何加速被使用，说明道具耗尽或未配置，退出加速循环避免死循环
-                        # if not used_speedup:
-                        #     speedup_running = False
-                        #     break
 
                         await self.control.await_element_appear(QUEUE_SPEEDUP, click=True, time_out=2, sleep=1)
 

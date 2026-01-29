@@ -32,16 +32,27 @@ for v in yaml_paths:
 rapidocr_data = list(set(yaml_add_data + onnx_add_data))
 # -- end rapidocr ONNX runtime model files inclusion --
 
+# -- 其他需要额外引入的包
+models = [
+    (f'{Path(nicegui.__file__).parent}', 'nicegui'),
+    (f'{Path(msc.__file__).parent}', 'msc'),
+    (f'{Path(mtc.__file__).parent}', 'mtc'),
+    ("static", "static")
+]
+# -- --
+datas = rapidocr_data + models
+
+
+# -- 需要显式引入的包
+hiddenimports = ['nicegui', 'cv2', 'msc', 'mtc']
+# -- --
+
 a = Analysis(
     ['main.py'],
     pathex=[sys.prefix],
     binaries=[],
-    datas=[(f'{Path(nicegui.__file__).parent}', 'nicegui'),
-           (f'{Path(msc.__file__).parent}', 'msc'),
-           (f'{Path(mtc.__file__).parent}', 'mtc'),
-           ("static", "static"),
-           rapidocr_data],
-    hiddenimports=['nicegui', 'cv2', 'msc', 'mtc'],
+    datas=datas,
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

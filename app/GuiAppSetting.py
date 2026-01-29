@@ -74,7 +74,7 @@ class GuiAppSetting:
 
             with ui.row().classes('items-center'):
                 ui.label('OCR设置:').classes('text-xl')
-                ocr_tool = ui.select(label='OCR API', options=['有道', '云析'], value=self.conf.ocr_tool).classes('w-64')
+                ocr_tool = ui.select(label='OCR API', options=['RapidOcr', '腾讯', '百度', '有道', '云析'], value=self.conf.ocr_tool).classes('w-64')
 
             with ui.row().classes('w-full items-center'):
                 ui.button('保存设置', on_click=lambda: _save_settings()).props('color=primary')

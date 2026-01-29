@@ -1,21 +1,15 @@
 import asyncio
 import base64
-import hashlib
-import json
 import logging
-import time
-import uuid
 from typing import Any, Dict, List, Optional, Tuple, Callable
 
 import cv2
-import requests
-from aip import AipOcr
-from tencentcloud.common import credential
-from tencentcloud.ocr.v20181119 import ocr_client, models
 
-from device_operation.Settings import Settings
+from core.tools.RapidOcr import RapidOcr
 
-settings = Settings()
+# from device_operation.Settings import Settings
+
+# settings = Settings()
 
 Box = Tuple[int, int, int, int]
 
@@ -33,13 +27,9 @@ class OcrTools:
       { 'success': bool, 'texts': List[str] or List[{'text', 'box'}], 'raw': Any, 'error': Optional[str] }
     """
 
-    def __init__(self, setting: Settings = settings):
-        self.settings = setting
-        self._baidu_client = AipOcr(
-            setting.BAIDU_APP_ID,
-            setting.BAIDU_API_KEY,
-            setting.BAIDU_SECRET_KEY
-        )
+    def __init__(self):
+
+        self._rapid_ocr = RapidOcr()
 
     # --- 静态辅助方法 ---
 
@@ -114,102 +104,102 @@ class OcrTools:
             logging.warning("解析边界框字符串时出错.", exc_info=True)
             return None
 
-    @staticmethod
-    def _generate_youdao_sign(app_key: str, app_secret: str, image_b64: str) -> Tuple[str, str, str]:
-        """将 Youdao 的签名生成逻辑独立出来。"""
-        size = len(image_b64)
-        # Youdao 要求的截断逻辑，保持不变
-        truncated_image = image_b64 if size <= 20 else image_b64[0:10] + str(size) + image_b64[size - 10:size]
-        curtime = str(int(time.time()))
-        salt = str(uuid.uuid1())
-        sign_str = app_key + truncated_image + salt + curtime + app_secret
-
-        hash_algorithm = hashlib.sha256()
-        hash_algorithm.update(sign_str.encode('utf-8'))
-        sign = hash_algorithm.hexdigest()
-
-        return sign, curtime, salt
-
-    # --- 统一的结果解析器 ---
-
-    @staticmethod
-    def parse_baidu_resp(resp: Dict[str, Any], include_location: bool = False):
-        if not isinstance(resp, dict):
-            return []
-        out = []
-        for w in resp.get('words_result', []) or []:
-            text = w.get('words') if isinstance(w, dict) else str(w)
-            if include_location:
-                out.append({'text': text, 'box': None})
-            else:
-                out.append(text)
-        return out
-
-    @staticmethod
-    def parse_tencent_resp(resp: Dict[str, Any], include_location: bool = False):
-        if not isinstance(resp, dict):
-            return []
-        out = []
-        for d in resp.get('TextDetections', []) or []:
-            text = d.get('DetectedText')
-            box = None
-            if include_location:
-                box = OcrTools._box_from_itempolygon(d.get('ItemPolygon') or {})
-                if not box:
-                    poly = d.get('Polygon') or d.get('polygon')
-                    if isinstance(poly, list):
-                        box = OcrTools._box_from_polygon_points(poly)
-            if include_location:
-                out.append({'text': text, 'box': box})
-            else:
-                out.append(text)
-        return out
-
-    @staticmethod
-    def parse_youdao_resp(resp: Dict[str, Any], include_location: bool = False):
-        if not isinstance(resp, dict): return []
-        out = []
-        result = resp.get('Result') or resp.get('result')
-        if not isinstance(result, dict): return out
-        regions = result.get('regions', []) or []
-        for region in regions:
-            lines = region.get('lines', []) or []
-            for line in lines:
-                text = line.get('text') or line.get('Text')
-                box = None
-                if include_location:
-                    box = OcrTools._box_from_boundingbox_str(line.get('boundingBox') or region.get('boundingBox') or '')
-                    out.append({'text': text, 'box': box})
-                else:
-                    out.append(text)
-        return out
-
-    @staticmethod
-    def parse_zhyunxi_resp(resp: Dict[str, Any], include_location: bool = False):
-        if not isinstance(resp, dict):
-            return []
-        out: List[Any] = []
-        records = resp.get('data') or resp.get('Data') or []
-        if not isinstance(records, list):
-            return out
-        for row in records:
-            if not isinstance(row, dict):
-                continue
-            text_value = row.get('text')
-            text = str(text_value) if text_value is not None else ''
-            if include_location:
-                points = []
-                for idx in range(1, 5):
-                    x = row.get(f'x{idx}')
-                    y = row.get(f'y{idx}')
-                    if x is None or y is None:
-                        continue
-                    points.append({'x': x, 'y': y})
-                box = OcrTools._box_from_polygon_points(points)
-                out.append({'text': text, 'box': box})
-            else:
-                out.append(text)
-        return out
+    # @staticmethod
+    # def _generate_youdao_sign(app_key: str, app_secret: str, image_b64: str) -> Tuple[str, str, str]:
+    #     """将 Youdao 的签名生成逻辑独立出来。"""
+    #     size = len(image_b64)
+    #     # Youdao 要求的截断逻辑，保持不变
+    #     truncated_image = image_b64 if size <= 20 else image_b64[0:10] + str(size) + image_b64[size - 10:size]
+    #     curtime = str(int(time.time()))
+    #     salt = str(uuid.uuid1())
+    #     sign_str = app_key + truncated_image + salt + curtime + app_secret
+    #
+    #     hash_algorithm = hashlib.sha256()
+    #     hash_algorithm.update(sign_str.encode('utf-8'))
+    #     sign = hash_algorithm.hexdigest()
+    #
+    #     return sign, curtime, salt
+    #
+    # # --- 统一的结果解析器 ---
+    #
+    # @staticmethod
+    # def parse_baidu_resp(resp: Dict[str, Any], include_location: bool = False):
+    #     if not isinstance(resp, dict):
+    #         return []
+    #     out = []
+    #     for w in resp.get('words_result', []) or []:
+    #         text = w.get('words') if isinstance(w, dict) else str(w)
+    #         if include_location:
+    #             out.append({'text': text, 'box': None})
+    #         else:
+    #             out.append(text)
+    #     return out
+    #
+    # @staticmethod
+    # def parse_tencent_resp(resp: Dict[str, Any], include_location: bool = False):
+    #     if not isinstance(resp, dict):
+    #         return []
+    #     out = []
+    #     for d in resp.get('TextDetections', []) or []:
+    #         text = d.get('DetectedText')
+    #         box = None
+    #         if include_location:
+    #             box = OcrTools._box_from_itempolygon(d.get('ItemPolygon') or {})
+    #             if not box:
+    #                 poly = d.get('Polygon') or d.get('polygon')
+    #                 if isinstance(poly, list):
+    #                     box = OcrTools._box_from_polygon_points(poly)
+    #         if include_location:
+    #             out.append({'text': text, 'box': box})
+    #         else:
+    #             out.append(text)
+    #     return out
+    #
+    # @staticmethod
+    # def parse_youdao_resp(resp: Dict[str, Any], include_location: bool = False):
+    #     if not isinstance(resp, dict): return []
+    #     out = []
+    #     result = resp.get('Result') or resp.get('result')
+    #     if not isinstance(result, dict): return out
+    #     regions = result.get('regions', []) or []
+    #     for region in regions:
+    #         lines = region.get('lines', []) or []
+    #         for line in lines:
+    #             text = line.get('text') or line.get('Text')
+    #             box = None
+    #             if include_location:
+    #                 box = OcrTools._box_from_boundingbox_str(line.get('boundingBox') or region.get('boundingBox') or '')
+    #                 out.append({'text': text, 'box': box})
+    #             else:
+    #                 out.append(text)
+    #     return out
+    #
+    # @staticmethod
+    # def parse_zhyunxi_resp(resp: Dict[str, Any], include_location: bool = False):
+    #     if not isinstance(resp, dict):
+    #         return []
+    #     out: List[Any] = []
+    #     records = resp.get('data') or resp.get('Data') or []
+    #     if not isinstance(records, list):
+    #         return out
+    #     for row in records:
+    #         if not isinstance(row, dict):
+    #             continue
+    #         text_value = row.get('text')
+    #         text = str(text_value) if text_value is not None else ''
+    #         if include_location:
+    #             points = []
+    #             for idx in range(1, 5):
+    #                 x = row.get(f'x{idx}')
+    #                 y = row.get(f'y{idx}')
+    #                 if x is None or y is None:
+    #                     continue
+    #                 points.append({'x': x, 'y': y})
+    #             box = OcrTools._box_from_polygon_points(points)
+    #             out.append({'text': text, 'box': box})
+    #         else:
+    #             out.append(text)
+    #     return out
 
     # --- 核心同步方法包装器 ---
 
@@ -229,120 +219,129 @@ class OcrTools:
             logging.exception(f'OCR provider "{func_name}" failed.')
             return self._make_result(False, error=str(e))
 
-    def _tencent_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
-        """实现 Tencent OCR 调用的实际逻辑。"""
-        cred = credential.Credential(self.settings.TENCENT_SECRET_ID, self.settings.TENCENT_SECRET_KEY)
-        client = ocr_client.OcrClient(cred, "ap-guangzhou")
-        req = models.GeneralAccurateOCRRequest()
-        req.ImageBase64 = image_b64
-        resp = client.GeneralAccurateOCR(req)
-        resp_json = json.loads(resp.to_json_string())
-
-        texts = self.parse_tencent_resp(resp_json, include_location=include_location)
-        return self._make_result(True, texts=texts, raw=resp_json)
-
-    def _baidu_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
-        """实现 Baidu OCR 调用的实际逻辑。"""
-        img_bytes = base64.b64decode(image_b64.encode('utf-8'))
-        result = self._baidu_client.basicGeneral(img_bytes)
-
-        texts = self.parse_baidu_resp(result, include_location=include_location)
-        return self._make_result(True, texts=texts, raw=result)
-
-    def _youdao_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
-        """实现 Youdao OCR 调用的实际逻辑。"""
-        app_key = self.settings.YOUDAO_APP_ID
-        app_secret = self.settings.YOUDAO_APP_SECRET
-
-        sign, curtime, salt = self._generate_youdao_sign(app_key, app_secret, image_b64)
-
-        data = {
-            'detectType': '10012',  # 通用识别
-            'imageType': '1',  # Base64
-            'langType': 'zh-CHS',  # 中文优先
-            'img': image_b64,
-            'docType': 'json',
-            'signType': 'v3',
-            'appKey': app_key,
-            'salt': salt,
-            'curtime': curtime,
-            'sign': sign,
-        }
-
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        response = requests.post('https://openapi.youdao.com/ocrapi', data=data, headers=headers, timeout=10)
-        resp_json = response.json()
-
-        if resp_json.get('errorCode') != '0':
-            return self._make_result(False, raw=resp_json, error=f"Youdao Error: {resp_json.get('errorCode')}")
-
-        texts = self.parse_youdao_resp(resp_json, include_location=include_location)
-        return self._make_result(True, texts=texts, raw=resp_json)
-
-    def _zhyunxi_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
-        """实现智云曦 OCR 调用的实际逻辑。"""
-        api_key = getattr(self.settings, 'ZHYUNXI_API_KEY', None)
-        if not api_key:
-            return self._make_result(False, error='missing_zhyunxi_api_key')
-
-        api_id = getattr(self.settings, 'ZHYUNXI_API_ID', 15) or 15
-        api_url = getattr(self.settings, 'ZHYUNXI_API_URL', "http://api.zhyunxi.com/api.php") or "http://api.zhyunxi.com/api.php"
-
-        payload = {
-            'api': api_id,
-            'key': api_key,
-            'imgbase64': image_b64
-        }
-
-        response = requests.post(api_url, json=payload, timeout=10)
-        response.raise_for_status()
-        resp_json = response.json()
-
-        if resp_json.get('code') not in (0, '0'):
-            return self._make_result(False, raw=resp_json, error=f"Zhyunxi Error: {resp_json.get('msg')}")
-
-        texts = self.parse_zhyunxi_resp(resp_json, include_location=include_location)
-        return self._make_result(True, texts=texts, raw=resp_json)
+    # def _tencent_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
+    #     """实现 Tencent OCR 调用的实际逻辑。"""
+    #     cred = credential.Credential(self.settings.TENCENT_SECRET_ID, self.settings.TENCENT_SECRET_KEY)
+    #     client = ocr_client.OcrClient(cred, "ap-guangzhou")
+    #     req = models.GeneralAccurateOCRRequest()
+    #     req.ImageBase64 = image_b64
+    #     resp = client.GeneralAccurateOCR(req)
+    #     resp_json = json.loads(resp.to_json_string())
+    #
+    #     texts = self.parse_tencent_resp(resp_json, include_location=include_location)
+    #     return self._make_result(True, texts=texts, raw=resp_json)
+    #
+    # def _baidu_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
+    #     """实现 Baidu OCR 调用的实际逻辑。"""
+    #     img_bytes = base64.b64decode(image_b64.encode('utf-8'))
+    #     result = self._baidu_client.basicGeneral(img_bytes)
+    #
+    #     texts = self.parse_baidu_resp(result, include_location=include_location)
+    #     return self._make_result(True, texts=texts, raw=result)
+    #
+    # def _youdao_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
+    #     """实现 Youdao OCR 调用的实际逻辑。"""
+    #     app_key = self.settings.YOUDAO_APP_ID
+    #     app_secret = self.settings.YOUDAO_APP_SECRET
+    #
+    #     sign, curtime, salt = self._generate_youdao_sign(app_key, app_secret, image_b64)
+    #
+    #     data = {
+    #         'detectType': '10012',  # 通用识别
+    #         'imageType': '1',  # Base64
+    #         'langType': 'zh-CHS',  # 中文优先
+    #         'img': image_b64,
+    #         'docType': 'json',
+    #         'signType': 'v3',
+    #         'appKey': app_key,
+    #         'salt': salt,
+    #         'curtime': curtime,
+    #         'sign': sign,
+    #     }
+    #
+    #     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    #     response = requests.post('https://openapi.youdao.com/ocrapi', data=data, headers=headers, timeout=10)
+    #     resp_json = response.json()
+    #
+    #     if resp_json.get('errorCode') != '0':
+    #         return self._make_result(False, raw=resp_json, error=f"Youdao Error: {resp_json.get('errorCode')}")
+    #
+    #     texts = self.parse_youdao_resp(resp_json, include_location=include_location)
+    #     return self._make_result(True, texts=texts, raw=resp_json)
+    #
+    # def _zhyunxi_ocr_impl(self, image_b64: str, include_location: bool) -> OcrResult:
+    #     """实现智云曦 OCR 调用的实际逻辑。"""
+    #     api_key = getattr(self.settings, 'ZHYUNXI_API_KEY', None)
+    #     if not api_key:
+    #         return self._make_result(False, error='missing_zhyunxi_api_key')
+    #
+    #     api_id = getattr(self.settings, 'ZHYUNXI_API_ID', 15) or 15
+    #     api_url = getattr(self.settings, 'ZHYUNXI_API_URL', "http://api.zhyunxi.com/api.php") or "http://api.zhyunxi.com/api.php"
+    #
+    #     payload = {
+    #         'api': api_id,
+    #         'key': api_key,
+    #         'imgbase64': image_b64
+    #     }
+    #
+    #     response = requests.post(api_url, json=payload, timeout=10)
+    #     response.raise_for_status()
+    #     resp_json = response.json()
+    #
+    #     if resp_json.get('code') not in (0, '0'):
+    #         return self._make_result(False, raw=resp_json, error=f"Zhyunxi Error: {resp_json.get('msg')}")
+    #
+    #     texts = self.parse_zhyunxi_resp(resp_json, include_location=include_location)
+    #     return self._make_result(True, texts=texts, raw=resp_json)
 
     # --- 对外暴露的同步方法：使用包装器 ---
 
-    def tencent_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        return self._ocr_api_wrapper(self._tencent_ocr_impl, image, include_location)
+    # def tencent_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     return self._ocr_api_wrapper(self._tencent_ocr_impl, image, include_location)
+    #
+    # def baidu_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     return self._ocr_api_wrapper(self._baidu_ocr_impl, image, include_location)
+    #
+    # def youdao_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     return self._ocr_api_wrapper(self._youdao_ocr_impl, image, include_location)
+    #
+    # def zhyunxi_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     return self._ocr_api_wrapper(self._zhyunxi_ocr_impl, image, include_location)
 
-    def baidu_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        return self._ocr_api_wrapper(self._baidu_ocr_impl, image, include_location)
-
-    def youdao_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        return self._ocr_api_wrapper(self._youdao_ocr_impl, image, include_location)
-
-    def zhyunxi_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        return self._ocr_api_wrapper(self._zhyunxi_ocr_impl, image, include_location)
+    def rapid_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+        return self._rapid_ocr.ocr(image=image, include_location=include_location)
 
     # --- 异步支持 ---
 
-    async def async_tencent_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        """Async wrapper for `tencent_ocr` using a thread so callers can await it."""
-        return await asyncio.to_thread(self.tencent_ocr, image, include_location)
+    # async def async_tencent_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     """Async wrapper for `tencent_ocr` using a thread so callers can await it."""
+    #     return await asyncio.to_thread(self.tencent_ocr, image, include_location)
+    #
+    # async def async_baidu_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     """Async wrapper for `baidu_ocr`."""
+    #     return await asyncio.to_thread(self.baidu_ocr, image, include_location)
+    #
+    # async def async_youdao_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     """Async wrapper for `youdao_ocr`."""
+    #     return await asyncio.to_thread(self.youdao_ocr, image, include_location)
+    #
+    # async def async_zhyunxi_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+    #     """Async wrapper for `zhyunxi_ocr`."""
+    #     return await asyncio.to_thread(self.zhyunxi_ocr, image, include_location)
 
-    async def async_baidu_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        """Async wrapper for `baidu_ocr`."""
-        return await asyncio.to_thread(self.baidu_ocr, image, include_location)
-
-    async def async_youdao_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        """Async wrapper for `youdao_ocr`."""
-        return await asyncio.to_thread(self.youdao_ocr, image, include_location)
-
-    async def async_zhyunxi_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
-        """Async wrapper for `zhyunxi_ocr`."""
-        return await asyncio.to_thread(self.zhyunxi_ocr, image, include_location)
+    async def async_rapid_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+        """Async wrapper for `rapid_ocr`."""
+        return await asyncio.to_thread(self.rapid_ocr, image, include_location)
 
     async def async_parallel_ocr(self, image: cv2.Mat, providers: List[str], include_location: bool = False) -> Dict[str, OcrResult]:
         """Run multiple OCR providers in parallel and return a dict of results."""
         coro_map: Dict[str, Callable[..., Any]] = {
-            '腾讯': self.async_tencent_ocr,
-            '百度': self.async_baidu_ocr,
-            '有道': self.async_youdao_ocr,
-            '云析': self.async_zhyunxi_ocr,
+            # '腾讯': self.async_tencent_ocr,
+            # '百度': self.async_baidu_ocr,
+            # '有道': self.async_youdao_ocr,
+            # '云析': self.async_zhyunxi_ocr,
+            'rapidocr': self.async_rapid_ocr,
+            'RapidOcr': self.async_rapid_ocr,
         }
 
         tasks_map = {
@@ -371,10 +370,11 @@ class OcrTools:
         """Convenience dispatcher: awaitable OCR call for a single provider."""
         provider_lower = (provider or '').lower()
         coro_map: Dict[str, Callable[..., Any]] = {
-            '腾讯': self.async_tencent_ocr,
-            '百度': self.async_baidu_ocr,
-            '有道': self.async_youdao_ocr,
-            '云析': self.async_zhyunxi_ocr,
+            # '腾讯': self.async_tencent_ocr,
+            # '百度': self.async_baidu_ocr,
+            # '有道': self.async_youdao_ocr,
+            # '云析': self.async_zhyunxi_ocr,
+            'rapidocr': self.async_rapid_ocr,
         }
 
         fn = coro_map.get(provider_lower)

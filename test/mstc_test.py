@@ -45,7 +45,7 @@ def crop_screencap(controller: ScreenCap, x1: int, y1: int, x2: int, y2: int):
     return cropped_img
 
 
-save_screencap(MuMuCap(2))
+save_screencap(MuMuCap(1))
 # perform_screencap(MuMuCap(0))
 #
 # img = cv2.imread("screencap.png")

@@ -15,5 +15,5 @@
   git push origin --tags
 ```
 
-
-codex --sandbox workspace-write --ask-for-approval on-request
+TODO 订单优化: 缺少图纸时可选用电路板提交
+TODO 雷达优化: 使用GEC时可设定剩余多少GEC停止

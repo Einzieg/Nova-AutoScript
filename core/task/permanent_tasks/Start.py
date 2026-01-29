@@ -35,5 +35,6 @@ class Start(TaskBase):
                 self.logging.log("游戏启动失败,尝试重启", self.target)
                 await self.device.close_app()
                 await self.start()
+            await self.control.matching_one(Templates.CONFIRM_RELOGIN, click=True)
         else:
             self.logging.log("跳过启动模拟器", self.target)
