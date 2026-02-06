@@ -322,6 +322,7 @@ class Order(TaskBase):
                 # 加速循环
                 speedup_running = True
                 while speedup_running:
+                    await asyncio.sleep(2)
                     await self.control.await_element_appear(SMART_PRODUCTION, click=True, time_out=2, sleep=1.5)
                     # TODO 看有没有资源不够的弹窗
 
@@ -363,20 +364,16 @@ class Order(TaskBase):
                         img = self.image_tool.apply_mask(self.device.get_screencap(), SPEEDUP_MASK)
                         fabricate_ocr = await self.ocr.async_ocr(provider=self.ocr_tool, image=img)
                         if not fabricate_ocr['success']:
-                            speedup_running = False
                             break
                         try:
                             fabricate_time = self.time_tools.parse_duration_to_seconds(fabricate_ocr['texts'][0])
                         except IndexError:
-                            speedup_running = False
                             break
 
                         if fabricate_time and fabricate_time <= SPEEDUP_SECOND['15_min']:
                             await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
-                            speedup_running = False
                             break
                         if fabricate_time == 0:
-                            speedup_running = False
                             break
                 if not speedup_running:
                     await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3)
@@ -421,8 +418,8 @@ class Order(TaskBase):
         await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
         await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
 
-        if await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3):
-            await self._handle_more_order()
+        # if await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3):
+        await self._handle_more_order()
 
     async def _handle_more_order(self):
         if self.order_policy == "不使用超空间信标":
@@ -437,7 +434,7 @@ class Order(TaskBase):
                 await self.control.await_element_appear(GEC_ORDER, click=True, time_out=1)
             else:
                 await self.return_home()
-                raise OrderFinishes("超空间信标不足,订单结束 <<<")
+                raise OrderFinishes("超空间信标不足,且无法使用GEC购买,订单结束 <<<")
 
         await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
 
