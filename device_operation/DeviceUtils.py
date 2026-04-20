@@ -6,7 +6,6 @@ import time
 from pathlib import Path
 
 import cv2
-from mmumu.api import get_mumu_path
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
@@ -25,6 +24,14 @@ from mtc.touch import Touch
 from core.LogManager import LogManager
 from device_operation.AdbClient import AdbClient
 from models import Config, Module
+
+if sys.platform == 'win32':
+    try:
+        from mmumu.api import get_mumu_path
+    except ImportError:
+        get_mumu_path = None
+else:
+    get_mumu_path = None
 
 
 class DeviceUtils:
@@ -238,6 +245,8 @@ class DeviceUtils:
 
     async def start_simulator(self):
         try:
+            if not get_mumu_path:
+                raise RuntimeError("MuMu 模拟器仅支持 Windows 环境")
             # "D:/Software/MuMuPlayer-12.0/nx_main/MuMuManager.exe control -v 0 launch"
             mumu_path = get_mumu_path()
             if mumu_path:
@@ -314,8 +323,6 @@ class DeviceUtils:
 
 
 if __name__ == '__main__':
-    from mmumu.manger import get_mumu_path
-
-    print(get_mumu_path())
+    print(get_mumu_path() if get_mumu_path else "MuMu not available on this platform")
     # device = DeviceUtils("6")
     # asyncio.run(device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 500))

@@ -258,3 +258,28 @@ class Templates:
         threshold=0.65,
         template_path=ROOT_DIR / "static/novaimgs/button/quick_repair.png"
     )
+    PLANET_TRANSFORM = Template(
+        name="星球资源",
+        threshold=0.85,
+        template_path=ROOT_DIR / "static/novaimgs/button/planet_transform.png"
+    )
+    RESOURCE_HUB = Template(
+        name="资源枢纽",
+        threshold=0.85,
+        template_path=ROOT_DIR / "static/novaimgs/button/resource_hub.png"
+    )
+    ANOMALY_WATCH = Template(
+        name="异常观测",
+        threshold=0.85,
+        template_path=ROOT_DIR / "static/novaimgs/button/anomaly_watch.png"
+    )
+    COLLECT_PLANET = Template(
+        name="全部收取",
+        threshold=0.85,
+        template_path=ROOT_DIR / "static/novaimgs/button/collect_planet.png"
+    )
+    BTN_BACK = Template(
+        name="返回按钮",
+        threshold=0.85,
+        template_path=ROOT_DIR / "static/novaimgs/button/btn_back.png"
+    )

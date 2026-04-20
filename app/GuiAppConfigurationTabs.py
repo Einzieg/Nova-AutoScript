@@ -149,6 +149,10 @@ class GuiAppConfigurationTabs:
                               on_change=lambda e: Module.update(wreckage=e.value).where(Module.name == tab_name).execute(),
                               value=bool(module.wreckage)
                               )
+                    ui.switch(text='采集星球资源',
+                              on_change=lambda e: Module.update(planet_resource=e.value).where(Module.name == tab_name).execute(),
+                              value=bool(module.planet_resource)
+                              )
             with ui.tab_panel(events):
                 ui.label('活动')
             with ui.tab_panel(outer):

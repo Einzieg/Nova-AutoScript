@@ -33,6 +33,8 @@ class Module(Model):
 
     wreckage = BlobField(default=True)  # 采集残骸
 
+    planet_resource = BlobField(default=False)  # 采集星球资源
+
     # 其他任务 ---------------------------------------------
 
     hidden_switch = BlobField(default=False)  # 隐秘开关
