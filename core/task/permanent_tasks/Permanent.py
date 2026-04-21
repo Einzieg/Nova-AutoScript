@@ -80,29 +80,76 @@ class Permanent(TaskBase):
         self.logging.log("未找到残骸", self.target, logging.INFO)
         return False
 
+    async def _collect_planet_wait(self, step: str, template, **kwargs):
+        self.logging.log(
+            f"采集星球资源 | 开始等待 | {step} | 模板={template.name}",
+            self.target,
+            logging.INFO,
+        )
+        ok = await self.control.await_element_appear(template, **kwargs)
+        level = logging.INFO if ok else logging.WARNING
+        self.logging.log(
+            f"采集星球资源 | 等待结束 | {step} | {'已找到' if ok else '超时未找到'} | 模板={template.name}",
+            self.target,
+            level,
+        )
+        return ok
+
+    async def _collect_planet_close(self, step: str, template):
+        self.logging.log(
+            f"采集星球资源 | 尝试关闭 | {step} | 模板={template.name}",
+            self.target,
+            logging.INFO,
+        )
+        hit = await self.control.matching_one(template, click=True)
+        level = logging.INFO if hit else logging.WARNING
+        self.logging.log(
+            f"采集星球资源 | 关闭结束 | {step} | {'已匹配' if hit else '未匹配'} | 模板={template.name}",
+            self.target,
+            level,
+        )
+        return hit
+
     async def collect_planet_resource(self):
         if not self.module.planet_resource:
             return
 
+        self.logging.log("采集星球资源 | 流程开始", self.target, logging.INFO)
         await self.reset_process()
-        await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_element_appear(Templates.MORE_SYSTEM, click=True, time_out=3)
-        await self.control.await_element_appear(Templates.PLANET_TRANSFORM, click=True, time_out=5, sleep=1)
-        await self.control.await_element_appear(Templates.RESOURCE_HUB, click=True, time_out=5, sleep=1)
-        await self.control.await_element_appear(Templates.COLLECT_PLANET, click=True, time_out=2, sleep=1)
-        for template in Templates.CLOSE_BUTTONS:
-            await self.control.matching_one(template, click=True)
+        self.logging.log("采集星球资源 | reset_process 完成", self.target, logging.INFO)
+
+        await self._collect_planet_wait("进入星系(TO_SYSTEM)", Templates.TO_SYSTEM, click=True, time_out=3)
+        await self._collect_planet_wait("更多星系(MORE_SYSTEM)", Templates.MORE_SYSTEM, click=True, time_out=3)
+        await self._collect_planet_wait(
+            "行星改造(PLANET_TRANSFORM)", Templates.PLANET_TRANSFORM, click=True, time_out=5, sleep=1
+        )
+        await self._collect_planet_wait("资源枢纽(RESOURCE_HUB)", Templates.RESOURCE_HUB, click=True, time_out=5, sleep=1)
+        await self._collect_planet_wait(
+            "采集行星(COLLECT_PLANET) 第一段", Templates.COLLECT_PLANET, click=True, time_out=2, sleep=1
+        )
+        for i, template in enumerate(Templates.CLOSE_BUTTONS):
+            await self._collect_planet_close(f"关闭按钮 第一段 #{i + 1}", template)
+
+        self.logging.log("采集星球资源 | 第一次返回(back) + 等待 3s", self.target, logging.INFO)
         await self.device.click_back()
         await asyncio.sleep(3)
 
-        await self.control.await_element_appear(Templates.ANOMALY_WATCH, click=True, time_out=5, sleep=1)
-        await self.control.await_element_appear(Templates.COLLECT_PLANET, click=True, time_out=2, sleep=1)
-        for template in Templates.CLOSE_BUTTONS:
-            await self.control.matching_one(template, click=True)
+        await self._collect_planet_wait(
+            "异常观测(ANOMALY_WATCH)", Templates.ANOMALY_WATCH, click=True, time_out=5, sleep=1
+        )
+        await self._collect_planet_wait(
+            "采集行星(COLLECT_PLANET) 第二段", Templates.COLLECT_PLANET, click=True, time_out=2, sleep=1
+        )
+        for i, template in enumerate(Templates.CLOSE_BUTTONS):
+            await self._collect_planet_close(f"关闭按钮 第二段 #{i + 1}", template)
+
+        self.logging.log("采集星球资源 | 第二次返回(back) + 等待 2s", self.target, logging.INFO)
         await self.device.click_back()
         await asyncio.sleep(2)
+        self.logging.log("采集星球资源 | 第三次返回(back) + 等待 5s", self.target, logging.INFO)
         await self.device.click_back()
         await asyncio.sleep(5)
+        self.logging.log("采集星球资源 | 流程结束", self.target, logging.INFO)
         return
 
     async def attack_monsters(self, normal_attacked: int = 0):
