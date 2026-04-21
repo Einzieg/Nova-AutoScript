@@ -100,7 +100,8 @@ class Permanent(TaskBase):
         for template in Templates.CLOSE_BUTTONS:
             await self.control.matching_one(template, click=True)
         await self.device.click_back()
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
+        await self.device.click_back()
         await asyncio.sleep(5)
         return
 
