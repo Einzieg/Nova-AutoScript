@@ -110,19 +110,19 @@ class TaskBase:
 
     async def attack(self, sleet_all=False):
         self.revenge = False
-        await self.control.await_element_appear(Templates.ATTACK_BUTTON, click=True, time_out=3)
-        if await self.control.await_element_appear(Templates.REVENGE, time_out=2):
+        await self.control.await_text_appear("攻击", click=True, time_out=3)
+        if await self.control.await_text_appear("仇恨值已满", exact=False, time_out=3):
             self.revenge = True
-            await self.control.matching_one(Templates.REVENGE_ATTACK, click=True, sleep=1)
-        await self.control.matching_one(Templates.REPAIR, click=True, sleep=1)
+            await self.control.await_text_appear("攻击", click=True, time_out=3)
+        await self.control.matching_text("快速维修", click=True, sleep=1)
         fleets = json.loads(self.module.attack_fleet)
         if "all" in fleets or sleet_all:
-            await self.control.await_element_appear(Templates.SELECTALL, click=True, time_out=3, sleep=0.5)
+            await self.control.await_text_appear("选择全部", click=True, time_out=3, sleep=0.5)
         else:
             for fleet in fleets:
                 await self.device.click(fleet_map[fleet])
 
-        if await self.control.await_element_appear(Templates.CONFIRM_ATTACK, click=True, time_out=0.5):
+        if await self.control.await_text_appear("确定", click=True, time_out=0.5):
             await self.combat_checks()
             if self.revenge:
                 await self.recall_fleets()
@@ -132,17 +132,17 @@ class TaskBase:
 
     async def combat_checks(self):
         self.logging.log("检查是否进入战斗 >>>", self.target, logging.DEBUG)
-        if await self.control.await_element_appear(Templates.IN_BATTLE, time_out=180):
+        if await self.control.await_text_appear("战斗中", time_out=180, exact=False):
             self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
-            if await self.control.await_element_disappear(Templates.IN_BATTLE, time_out=120, sleep=3):
+            if await self.control.await_text_disappear("战斗中", time_out=120, sleep=3, exact=False):
                 self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
 
     async def recall_fleets(self):
         for template in Templates.MENUS:
             await self.control.await_element_appear(template, click=True, time_out=2)
-        await self.control.await_element_appear(Templates.FLEETS_MENU, click=True, time_out=3, sleep=2)
-        await self.control.await_element_appear(Templates.HOVER_RECALL, click=True, time_out=2)
+        await self.control.await_text_appear("舰队", click=True, time_out=3, sleep=2)
+        await self.control.await_text_appear("悬停召回", click=True, time_out=2)
         await self.device.click_back()
         await asyncio.sleep(1)
 

@@ -35,6 +35,8 @@ class Module(Model):
 
     planet_resource = BlobField(default=False)  # 采集星球资源
 
+    permanent_order = BlobField(default=False)  # 常驻任务做订单
+
     # 其他任务 ---------------------------------------------
 
     hidden_switch = BlobField(default=False)  # 隐秘开关

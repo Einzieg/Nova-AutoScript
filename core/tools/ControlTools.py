@@ -2,11 +2,13 @@ import asyncio
 import logging
 import random
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
 
 from core.LogManager import LogManager
+from core.tools.OcrTools import OcrTools
 from models.Template import Template
 
 
@@ -17,6 +19,7 @@ class ControlTools:
         self.offset = 3
         self.confidence = 0.8
         self.logging = LogManager()
+        self.ocr = OcrTools()
 
         self.forbidden_zones = [
             (0, 0, 500, 260),  # 左上角人物
@@ -59,6 +62,84 @@ class ControlTools:
                 return None
         except Exception as e:
             self.logging.log(f"{template.name} 匹配失败: {e}", self.target, logging.ERROR)
+            return None
+        finally:
+            if sleep is not None and sleep > 0:
+                await asyncio.sleep(sleep)
+
+    async def matching_text(
+        self,
+        text: str,
+        provider: str = 'RapidOcr',
+        click=False,
+        sleep=0.5,
+        offset_x=0,
+        offset_y=0,
+        exact=True,
+        case_sensitive=False,
+        debug=False,
+    ):
+        image = self.device.get_screencap()
+        try:
+            ocr_result = await self.ocr.async_ocr(provider=provider, image=image, include_location=True)
+            if not ocr_result.get('success'):
+                self.logging.log(f"{text} 文字识别失败: {ocr_result.get('error')}", self.target, logging.ERROR)
+                return None
+
+            debug_path = None
+            latest_debug_path = None
+            if debug:
+                debug_dir = Path("logs")
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                debug_path = debug_dir / f"ocr-debug-{text}.png"
+                latest_debug_path = debug_dir / "ocr-debug-latest.png"
+                cv2.imwrite(str(debug_path), image)
+                cv2.imwrite(str(latest_debug_path), image)
+
+            matches = []
+            debug_items = []
+            for item in ocr_result.get('texts', []):
+                if not isinstance(item, dict):
+                    continue
+
+                candidate = str(item.get('text') or '')
+                box = item.get('box')
+                center = OcrTools._center_from_box(box)
+                in_forbidden = center is not None and self.__is_within_no_click_zone(center[0], center[1])
+                debug_items.append(f"{candidate}@{center}, forbidden={in_forbidden}")
+
+                if center and OcrTools._text_matches(candidate, text, exact, case_sensitive):
+                    matches.append((candidate, center, in_forbidden))
+
+            if matches:
+                candidate, center, in_forbidden = matches[0]
+                random_offset_x = random.randint(-self.offset, self.offset)
+                random_offset_y = random.randint(-self.offset, self.offset)
+                coordinate = (
+                    center[0] + random_offset_x + offset_x,
+                    center[1] + random_offset_y + offset_y,
+                )
+                self.logging.log(f"{text} 文字识别成功，坐标 [{coordinate}]", self.target)
+                if debug:
+                    self.logging.log(
+                        f'OCR调试 | 目标="{text}" | 命中="{candidate}" | center={center} | forbidden={in_forbidden} | 截图={debug_path} | 最新截图={latest_debug_path} | OCR未屏蔽禁止区',
+                        self.target,
+                        logging.INFO,
+                    )
+                if click:
+                    await self.device.click(coordinate)
+                return coordinate
+
+            if debug:
+                self.logging.log(
+                    f'OCR调试 | 目标="{text}" | exact={exact} | 截图={debug_path} | 最新截图={latest_debug_path} | OCR识别={debug_items or "无"} | OCR未屏蔽禁止区',
+                    self.target,
+                    logging.INFO,
+                )
+            self.logging.log(f"{text} 文字未识别", self.target, logging.DEBUG)
+            return None
+        except Exception as e:
+            self.logging.log(f"{text} 文字识别失败: {e}", self.target, logging.ERROR)
             return None
         finally:
             if sleep is not None and sleep > 0:
@@ -116,6 +197,24 @@ class ControlTools:
                 new_coordinates.append([new_x, new_y])
         return new_coordinates
 
+    def shift_coordinates_after_centering(self, coordinates, center=(960, 540)):
+        shifted_coordinates = []
+        previous_coordinate = None
+
+        for coordinate in coordinates:
+            x, y = coordinate
+            if previous_coordinate is None:
+                new_x, new_y = x, y
+            else:
+                new_x = x + center[0] - previous_coordinate[0]
+                new_y = y + center[1] - previous_coordinate[1]
+
+            if (0 <= new_x <= 1920 and 0 <= new_y <= 1080) and not self.__is_within_no_click_zone(new_x, new_y):
+                shifted_coordinates.append([new_x, new_y])
+                previous_coordinate = coordinate
+
+        return shifted_coordinates
+
     async def await_element_appear(self, template: Template, click=False, time_out=60, sleep=0.5, offset_x=0, offset_y=0):
         start_time = time.time()
         while time.time() - start_time < time_out:
@@ -128,6 +227,60 @@ class ControlTools:
         start_time = time.time()
         while time.time() - start_time < time_out:
             if not await self.matching_one(template, click=False, sleep=sleep):
+                return True
+        return False
+
+    async def await_text_appear(
+        self,
+        text: str,
+        provider: str = 'RapidOcr',
+        click=False,
+        time_out=60,
+        sleep=0.5,
+        offset_x=0,
+        offset_y=0,
+        exact=True,
+        case_sensitive=False,
+        debug=False,
+    ):
+        start_time = time.time()
+        while time.time() - start_time < time_out:
+            coordinate = await self.matching_text(
+                text=text,
+                provider=provider,
+                click=click,
+                sleep=sleep,
+                offset_x=offset_x,
+                offset_y=offset_y,
+                exact=exact,
+                case_sensitive=case_sensitive,
+                debug=debug,
+            )
+            if coordinate:
+                return True
+        return False
+
+    async def await_text_disappear(
+        self,
+        text: str,
+        provider: str = 'RapidOcr',
+        time_out=60,
+        sleep=1,
+        exact=True,
+        case_sensitive=False,
+        debug=False,
+    ):
+        start_time = time.time()
+        while time.time() - start_time < time_out:
+            if not await self.matching_text(
+                text=text,
+                provider=provider,
+                click=False,
+                sleep=sleep,
+                exact=exact,
+                case_sensitive=case_sensitive,
+                debug=debug,
+            ):
                 return True
         return False
 

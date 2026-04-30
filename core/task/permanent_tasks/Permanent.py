@@ -1,4 +1,5 @@
 from core.task.TaskBase import *
+from core.task.daily_tasks.Order import Order
 
 TASK_NAME = "常驻任务"
 
@@ -15,7 +16,6 @@ class Permanent(TaskBase):
 
     def __init__(self, target):
         super().__init__(target)
-        self.target = target
 
     async def prepare(self):
         await super().prepare()
@@ -32,9 +32,23 @@ class Permanent(TaskBase):
     async def start(self):
         while True:
             await self.device.check_running_status()
-            await self.attack_monsters()
-            await self.collect_planet_resource()
+            await self.attack_red_elite_monsters()
             await self.collect_wreckage()
+            await self.attack_normal_monsters()
+            await self.process_orders()
+            await self.collect_planet_resource()
+
+    async def process_orders(self):
+        if not self.module.permanent_order:
+            return
+
+        self.logging.log("常驻任务 | 订单阶段开始（不使用超空间信标）", self.target, logging.INFO)
+        order = Order(self.target)
+        order.order_policy = "不使用超空间信标"
+        order.module.order_times = None
+
+        await order.start()
+        self.logging.log("常驻任务 | 订单阶段结束", self.target, logging.INFO)
 
     async def collect_wreckage(self):
         if not self.module.wreckage:
@@ -42,73 +56,143 @@ class Permanent(TaskBase):
 
         await self.reset_process()
 
-        for swipe in swipes:
-            if swipe:
-                await self.device.swipe(swipe, duration=400 if len(swipe) > 3 else 200)
-                await asyncio.sleep(1)
+        while True:
+            found_wreckage = False
+            for swipe in swipes:
+                if swipe:
+                    await self.device.swipe(swipe, duration=400 if len(swipe) > 3 else 200)
+                    await asyncio.sleep(1)
 
-            found = await self._search_and_collect()
-            if found:
+                result = await self._search_and_collect()
+                if result == "no_workships":
+                    return
+                if result == "collected":
+                    found_wreckage = True
+
+            if not found_wreckage:
                 return
 
-    async def _search_and_collect(self) -> bool:
-        """搜索残骸并尝试收集，成功返回 True，否则 False"""
-        for template in Templates.WRECKAGE_LIST:
-            wreckage = await self.control.move_coordinates(template)
-            if not wreckage:
+    async def _search_and_collect(self) -> str:
+        wreckage = await self._visible_wreckage_coordinates()
+        if not wreckage:
+            self.logging.log("当前屏幕未找到残骸", self.target, logging.INFO)
+            return "not_found"
+
+        self.logging.log(f"当前屏幕找到 {len(wreckage)} 个残骸坐标: {wreckage}", self.target, logging.INFO)
+        collected = False
+
+        for coordinate in wreckage:
+            await self.device.click(coordinate)
+            await asyncio.sleep(0.5)
+
+            if await self.control.matching_one(Templates.RECALL):
+                await self.device.click_back()
                 continue
 
-            for coordinate in wreckage:
-                await self.device.click(coordinate)
+            collect_clicked = await self.control.await_element_appear(
+                Templates.COLLECT, click=True, time_out=2, sleep=1
+            )
+            collected = collected or bool(collect_clicked)
+
+            if await self.control.matching_one(Templates.NO_WORKSHIPS):
+                await self.device.click_back()
                 await asyncio.sleep(0.5)
+                await self.device.click_back()
+                await asyncio.sleep(30)
+                self.logging.log("没有可用工程船，残骸采集阶段结束", self.target, logging.INFO)
+                return "no_workships"
 
-                if await self.control.matching_one(Templates.RECALL):
-                    await self.device.click_back()
+        return "collected" if collected else "not_found"
 
-                await self.control.await_element_appear(
-                    Templates.COLLECT, click=True, time_out=2, sleep=1
-                )
+    async def _visible_wreckage_coordinates(self):
+        coordinates = []
+        seen = set()
 
-                if await self.control.matching_one(Templates.NO_WORKSHIPS):
-                    await self.device.click_back()
-                    await asyncio.sleep(0.5)
-                    await self.device.click_back()
-                    await asyncio.sleep(30)
-                    return True
+        for template in Templates.WRECKAGE_LIST:
+            matches = await self.control.matching_all(template)
+            if not matches:
+                continue
 
-            return True
-        self.logging.log("未找到残骸", self.target, logging.INFO)
+            for x, y in matches:
+                key = (int(x), int(y))
+                if key in seen:
+                    continue
+                seen.add(key)
+                coordinates.append([int(x), int(y)])
+
+        ordered_coordinates = self._order_coordinates_by_collection_path(coordinates)
+        return self.control.shift_coordinates_after_centering(ordered_coordinates)
+
+    @staticmethod
+    def _order_coordinates_by_collection_path(coordinates, center=(960, 540)):
+        remaining = coordinates.copy()
+        ordered = []
+        current = center
+
+        while remaining:
+            next_coordinate = min(
+                remaining,
+                key=lambda coordinate: (coordinate[0] - current[0]) ** 2 + (coordinate[1] - current[1]) ** 2,
+            )
+            remaining.remove(next_coordinate)
+            ordered.append(next_coordinate)
+            current = next_coordinate
+
+        return ordered
+
+    async def attack_red_elite_monsters(self):
+        monster_configs = [
+            (self.module.red_monster, Templates.MONSTER_RED_LIST),
+            (self.module.elite_monster, Templates.MONSTER_ELITE_LIST),
+        ]
+        if not any(enabled for enabled, _ in monster_configs):
+            return
+
+        while await self._attack_one_from_configs(monster_configs):
+            pass
+
+        self.logging.log("未找到深红/精英海盗，进入下一阶段", self.target, logging.INFO)
+
+    async def attack_normal_monsters(self):
+        if not self.module.normal_monster:
+            return
+
+        normal_attacked = 0
+        monster_configs = [(True, Templates.MONSTER_NORMAL_LIST)]
+
+        while normal_attacked < NORMAL_MONSTER_CAP_PER_CYCLE:
+            attacked = await self._attack_one_from_configs(monster_configs)
+            if not attacked:
+                self.logging.log("未找到普通海盗，进入下一阶段", self.target, logging.INFO)
+                return
+
+            normal_attacked += 1
+            self.logging.log(
+                f"普通海盗攻击计数 {normal_attacked}/{NORMAL_MONSTER_CAP_PER_CYCLE}",
+                self.target,
+                logging.INFO,
+            )
+
+        self.logging.log("普通海盗本轮已达上限，进入下一阶段", self.target, logging.INFO)
+
+    async def _attack_one_from_configs(self, monster_configs) -> bool:
+        await self.reset_process()
+
+        for swipe in swipes:
+            if swipe:
+                await self.device.swipe(swipe, duration=400 if len(swipe) > 2 else 200)
+                await asyncio.sleep(1)
+
+            for enabled, template_list in monster_configs:
+                if not enabled:
+                    continue
+
+                for template in template_list:
+                    if await self.control.matching_one(template, click=True):
+                        await self.attack()
+                        return True
+
         return False
-
-    async def _collect_planet_wait(self, step: str, template, **kwargs):
-        self.logging.log(
-            f"采集星球资源 | 开始等待 | {step} | 模板={template.name}",
-            self.target,
-            logging.INFO,
-        )
-        ok = await self.control.await_element_appear(template, **kwargs)
-        level = logging.INFO if ok else logging.WARNING
-        self.logging.log(
-            f"采集星球资源 | 等待结束 | {step} | {'已找到' if ok else '超时未找到'} | 模板={template.name}",
-            self.target,
-            level,
-        )
-        return ok
-
-    async def _collect_planet_close(self, step: str, template):
-        self.logging.log(
-            f"采集星球资源 | 尝试关闭 | {step} | 模板={template.name}",
-            self.target,
-            logging.INFO,
-        )
-        hit = await self.control.matching_one(template, click=True)
-        level = logging.INFO if hit else logging.WARNING
-        self.logging.log(
-            f"采集星球资源 | 关闭结束 | {step} | {'已匹配' if hit else '未匹配'} | 模板={template.name}",
-            self.target,
-            level,
-        )
-        return hit
 
     async def collect_planet_resource(self):
         if not self.module.planet_resource:
@@ -118,77 +202,33 @@ class Permanent(TaskBase):
         await self.reset_process()
         self.logging.log("采集星球资源 | reset_process 完成", self.target, logging.INFO)
 
-        await self._collect_planet_wait("进入星系(TO_SYSTEM)", Templates.TO_SYSTEM, click=True, time_out=3)
-        await self._collect_planet_wait("更多星系(MORE_SYSTEM)", Templates.MORE_SYSTEM, click=True, time_out=3)
-        await self._collect_planet_wait(
-            "行星改造(PLANET_TRANSFORM)", Templates.PLANET_TRANSFORM, click=True, time_out=5, sleep=1
-        )
-        await self._collect_planet_wait("资源枢纽(RESOURCE_HUB)", Templates.RESOURCE_HUB, click=True, time_out=5, sleep=1)
-        await self._collect_planet_wait(
-            "采集行星(COLLECT_PLANET) 第一段", Templates.COLLECT_PLANET, click=True, time_out=2, sleep=1
-        )
-        for i, template in enumerate(Templates.CLOSE_BUTTONS):
-            await self._collect_planet_close(f"关闭按钮 第一段 #{i + 1}", template)
+        await self._collect_planet_resource_section("资源枢纽")
 
-        self.logging.log("采集星球资源 | 第一次返回(back) + 等待 3s", self.target, logging.INFO)
-        await self.device.click_back()
         await asyncio.sleep(3)
+        self.logging.log("采集星球资源 | 资源枢纽完成，重置视角", self.target, logging.INFO)
+        await self.reset_process()
 
-        await self._collect_planet_wait(
-            "异常观测(ANOMALY_WATCH)", Templates.ANOMALY_WATCH, click=True, time_out=5, sleep=1
-        )
-        await self._collect_planet_wait(
-            "采集行星(COLLECT_PLANET) 第二段", Templates.COLLECT_PLANET, click=True, time_out=2, sleep=1
-        )
-        for i, template in enumerate(Templates.CLOSE_BUTTONS):
-            await self._collect_planet_close(f"关闭按钮 第二段 #{i + 1}", template)
+        await self._collect_planet_resource_section("异象观测站")
 
-        self.logging.log("采集星球资源 | 第二次返回(back) + 等待 2s", self.target, logging.INFO)
-        await self.device.click_back()
-        await asyncio.sleep(2)
-        self.logging.log("采集星球资源 | 第三次返回(back) + 等待 5s", self.target, logging.INFO)
-        await self.device.click_back()
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
         self.logging.log("采集星球资源 | 流程结束", self.target, logging.INFO)
         return
 
-    async def attack_monsters(self, normal_attacked: int = 0):
-        await self.reset_process()
+    async def _collect_planet_resource_section(self, resource_name: str):
+        await self._open_planet_transform()
+        await self.control.await_text_appear(resource_name, click=True, time_out=5, sleep=1)
+        await self.control.await_text_appear("全部收取", click=True, time_out=2, sleep=1)
+        await self.control.await_text_appear("关闭", click=True, time_out=5, sleep=1)
 
-        skip_normal = normal_attacked >= NORMAL_MONSTER_CAP_PER_CYCLE
-
-        monster_configs = [
-            (self.module.red_monster, Templates.MONSTER_RED_LIST, False),
-            (self.module.elite_monster, Templates.MONSTER_ELITE_LIST, False),
-            (
-                self.module.normal_monster and not skip_normal,
-                Templates.MONSTER_NORMAL_LIST,
-                True,
-            ),
-        ]
-
-        for swipe in swipes:
-            if swipe:
-                await self.device.swipe(swipe, duration=400 if len(swipe) > 2 else 200)
-                await asyncio.sleep(1)
-
-            for enabled, template_list, counts_as_normal in monster_configs:
-                if not enabled:
-                    continue
-
-                for template in template_list:
-                    if await self.control.matching_one(template, click=True):
-                        await self.attack()
-                        if counts_as_normal:
-                            normal_attacked += 1
-                        return await self.attack_monsters(
-                            normal_attacked=normal_attacked
-                        )
+    async def _open_planet_transform(self):
+        await self.control.await_text_appear("系统", click=True, time_out=3)
+        await self.control.await_text_appear("更多", click=True, time_out=3)
+        await self.control.await_text_appear("行星改造", click=True, time_out=5, sleep=1)
 
     async def reset_process(self):
         await self.return_home()
-        await self.control.await_element_appear(Templates.SPACE_STATION, click=True, time_out=5)
-        await self.control.await_element_appear(Templates.STAR_SYSTEM, click=True, time_out=10)
-        if await self.control.await_element_appear(Templates.SPACE_STATION, click=False, time_out=10):
+        await self.control.await_text_appear("空间站", click=True, time_out=5, exact=True)
+        await self.control.await_text_appear("星系", click=True, time_out=10, exact=True)
+        if await self.control.await_text_appear("空间站", click=False, time_out=10, exact=True):
             await self.device.zoom_out()
             await asyncio.sleep(5)

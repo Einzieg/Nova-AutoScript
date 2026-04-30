@@ -22,6 +22,10 @@ def _migrate_module_columns():
         db.execute_sql(
             f'ALTER TABLE "{table}" ADD COLUMN planet_resource BLOB DEFAULT 0'
         )
+    if "permanent_order" not in columns:
+        db.execute_sql(
+            f'ALTER TABLE "{table}" ADD COLUMN permanent_order BLOB DEFAULT 0'
+        )
 
 
 def init_database():

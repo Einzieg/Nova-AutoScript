@@ -12,6 +12,7 @@ from core.tools.RapidOcr import RapidOcr
 # settings = Settings()
 
 Box = Tuple[int, int, int, int]
+Coordinate = Tuple[int, int]
 
 OcrResult = Dict[str, Any]
 
@@ -103,6 +104,26 @@ class OcrTools:
         except Exception:
             logging.warning("解析边界框字符串时出错.", exc_info=True)
             return None
+
+    @staticmethod
+    def _center_from_box(box: Any) -> Optional[Coordinate]:
+        if not isinstance(box, (list, tuple)) or len(box) != 4:
+            return None
+        try:
+            left, top, right, bottom = [int(float(value)) for value in box]
+            return (left + right) // 2, (top + bottom) // 2
+        except Exception:
+            logging.warning("解析 OCR 文本中心点时出错.", exc_info=True)
+            return None
+
+    @staticmethod
+    def _text_matches(candidate: str, target: str, exact: bool, case_sensitive: bool) -> bool:
+        if not case_sensitive:
+            candidate = candidate.lower()
+            target = target.lower()
+        if exact:
+            return candidate == target
+        return target in candidate
 
     # @staticmethod
     # def _generate_youdao_sign(app_key: str, app_secret: str, image_b64: str) -> Tuple[str, str, str]:
@@ -311,6 +332,81 @@ class OcrTools:
     def rapid_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
         return self._rapid_ocr.ocr(image=image, include_location=include_location)
 
+    def ocr(self, provider: str, image: cv2.Mat, include_location: bool = False) -> OcrResult:
+        provider_lower = (provider or '').lower()
+        func_map: Dict[str, Callable[..., OcrResult]] = {
+            # '腾讯': self.tencent_ocr,
+            # '百度': self.baidu_ocr,
+            # '有道': self.youdao_ocr,
+            # '云析': self.zhyunxi_ocr,
+            'rapidocr': self.rapid_ocr,
+        }
+
+        fn = func_map.get(provider_lower)
+        if fn:
+            return fn(image=image, include_location=include_location)
+
+        raise ValueError(f"未知的 OCR 程序: {provider}")
+
+    def get_text_centers(
+        self,
+        image: cv2.Mat,
+        target_text: str,
+        provider: str = 'RapidOcr',
+        exact: bool = True,
+        case_sensitive: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """
+        Return OCR text matches with center coordinates.
+
+        Coordinates are relative to the image passed in. If the image is a full
+        screenshot, centers are screen coordinates; if it is cropped, centers are
+        relative to that crop.
+        """
+        if not target_text:
+            return []
+
+        result = self.ocr(provider=provider, image=image, include_location=True)
+        if not result.get('success'):
+            return []
+
+        matches: List[Dict[str, Any]] = []
+        for item in result.get('texts', []):
+            if not isinstance(item, dict):
+                continue
+
+            text = str(item.get('text') or '')
+            if not self._text_matches(text, target_text, exact, case_sensitive):
+                continue
+
+            box = item.get('box')
+            center = self._center_from_box(box)
+            if center is None:
+                continue
+
+            matches.append({'text': text, 'box': box, 'center': center})
+
+        return matches
+
+    def get_text_center(
+        self,
+        image: cv2.Mat,
+        target_text: str,
+        provider: str = 'RapidOcr',
+        exact: bool = True,
+        case_sensitive: bool = False,
+    ) -> Optional[Coordinate]:
+        matches = self.get_text_centers(
+            image=image,
+            target_text=target_text,
+            provider=provider,
+            exact=exact,
+            case_sensitive=case_sensitive,
+        )
+        if not matches:
+            return None
+        return matches[0]['center']
+
     # --- 异步支持 ---
 
     # async def async_tencent_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
@@ -332,6 +428,40 @@ class OcrTools:
     async def async_rapid_ocr(self, image: cv2.Mat, include_location: bool = False) -> OcrResult:
         """Async wrapper for `rapid_ocr`."""
         return await asyncio.to_thread(self.rapid_ocr, image, include_location)
+
+    async def async_get_text_centers(
+        self,
+        image: cv2.Mat,
+        target_text: str,
+        provider: str = 'RapidOcr',
+        exact: bool = True,
+        case_sensitive: bool = False,
+    ) -> List[Dict[str, Any]]:
+        return await asyncio.to_thread(
+            self.get_text_centers,
+            image,
+            target_text,
+            provider,
+            exact,
+            case_sensitive,
+        )
+
+    async def async_get_text_center(
+        self,
+        image: cv2.Mat,
+        target_text: str,
+        provider: str = 'RapidOcr',
+        exact: bool = True,
+        case_sensitive: bool = False,
+    ) -> Optional[Coordinate]:
+        return await asyncio.to_thread(
+            self.get_text_center,
+            image,
+            target_text,
+            provider,
+            exact,
+            case_sensitive,
+        )
 
     async def async_parallel_ocr(self, image: cv2.Mat, providers: List[str], include_location: bool = False) -> Dict[str, OcrResult]:
         """Run multiple OCR providers in parallel and return a dict of results."""

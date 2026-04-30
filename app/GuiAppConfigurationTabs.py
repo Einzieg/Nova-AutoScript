@@ -132,7 +132,7 @@ class GuiAppConfigurationTabs:
                         ui.label('次')
 
             with ui.tab_panel(permanent):
-                with ui.card().classes('w-full h-full'):
+                with ui.card().classes('w-full'):
                     ui.switch(text='普通清道夫',
                               on_change=lambda e: Module.update(normal_monster=e.value).where(Module.name == tab_name).execute(),
                               value=bool(module.normal_monster)
@@ -152,6 +152,10 @@ class GuiAppConfigurationTabs:
                     ui.switch(text='采集星球资源',
                               on_change=lambda e: Module.update(planet_resource=e.value).where(Module.name == tab_name).execute(),
                               value=bool(module.planet_resource)
+                              )
+                    ui.switch(text='做订单（不使用超空间信标）',
+                              on_change=lambda e: Module.update(permanent_order=e.value).where(Module.name == tab_name).execute(),
+                              value=bool(module.permanent_order)
                               )
             with ui.tab_panel(events):
                 ui.label('活动')
