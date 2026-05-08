@@ -18,7 +18,7 @@ class Templates:
     )
     IN_BATTLE = Template(
         name="战斗中",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/identify_in/in_battle.png",
     )
     CONFIRM_RELOGIN = Template(
@@ -48,35 +48,35 @@ class Templates:
     )
     TO_SYSTEM = Template(
         name="系统按钮",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/button_system.png"
     )
     MORE_SYSTEM = Template(
         name="系统更多",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/button_more_system.png"
     )
 
     MENUS = [
         Template(
             name="金菜单",
-            threshold=0.85,
+            threshold=0.75,
             template_path=ROOT_DIR / "static/novaimgs/button/button_system_gold.png",
         ),
         Template(
             name="蓝菜单",
-            threshold=0.85,
+            threshold=0.75,
             template_path=ROOT_DIR / "static/novaimgs/button/button_system_blue.png",
         ),
     ]
     FLEETS_MENU = Template(
         name="舰队菜单",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/fleets_menu.png",
     )
     HOVER_RECALL = Template(
         name="悬停召回",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/hover_recall.png",
     )
     CLOSE_BUTTONS = [
@@ -108,7 +108,7 @@ class Templates:
     ]
     TO_HOME = Template(
         name="返回主页",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/to_home.png",
     )
     WRECKAGE_LIST = [
@@ -224,33 +224,33 @@ class Templates:
 
     COLLECT = Template(
         name="采集按钮",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/button_collect.png",
     )
 
     ATTACK_BUTTON = Template(
         name="攻击",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/attack/attack.png"
     )
     SELECTALL = Template(
         name="全选",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/attack/select_all.png"
     )
     CONFIRM_ATTACK = Template(
         name="确认攻击",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/attack/confirm_attack.png"
     )
     REVENGE = Template(
         name="复仇",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/attack/revenge.png"
     )
     REVENGE_ATTACK = Template(
         name="复仇攻击",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/attack/revenge_attack.png"
     )
     REPAIR = Template(
@@ -260,26 +260,26 @@ class Templates:
     )
     PLANET_TRANSFORM = Template(
         name="星球资源",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/planet_transform.png"
     )
     RESOURCE_HUB = Template(
         name="资源枢纽",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/resource_hub.png"
     )
     ANOMALY_WATCH = Template(
         name="异常观测",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/anomaly_watch.png"
     )
     COLLECT_PLANET = Template(
         name="全部收取",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/collect_planet.png"
     )
     BTN_BACK = Template(
         name="返回按钮",
-        threshold=0.85,
+        threshold=0.75,
         template_path=ROOT_DIR / "static/novaimgs/button/btn_back.png"
     )

@@ -15,34 +15,34 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 TO_TALENT = Template(
     name="天赋按钮",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/system/talent.png"
 )
 TALENT_CHOICE = Template(
     name="天赋选择",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/talent/special_talent.png"
 )
 TALENT_RC = Template(
     name="增加RC",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/talent/increase_rc.png"
 )
 TALENT_TIME = Template(
     name="减少时间",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/talent/reduce_time.png"
 )
 CONFIRM_TALENT = Template(
     name="天赋确认",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/talent/confirm_replacement_talent.png"
 )
 
 # 通过牌子提交订单所需模版
 TO_ORDER = Template(
     name="订单按钮",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/system/orders.png"
 )
 PCBA_DELIVERY = Template(
@@ -62,12 +62,12 @@ ORDER_DEPARTURE = Template(
 )
 DELIVERY_CONFIRM = Template(
     name="提交确认",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/confirm_delivery.png"
 )
 ORDER_CLOSE = Template(
     name="关闭订单",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/close_order.png"
 )
 # 通过制造提交订单所需模版
@@ -83,17 +83,17 @@ TO_CONTROL_PANEL_BLUE = Template(
 )
 ORDER_IS_HERE = Template(
     name="订单已到",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/order_arrived.png"
 )
 ECONOMY = Template(
     name="经济",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/economy.png"
 )
 # ORDER_ONTHEWAY = Template(
 #     name="订单未到",
-#     threshold=0.85,
+#     threshold=0.75,
 #     template_path=ROOT_DIR / "static/novaimgs/order/order_ontheway.png"
 # )
 QUICK_DELIVER = Template(
@@ -103,47 +103,47 @@ QUICK_DELIVER = Template(
 )
 PRODUCE_ORDER = Template(
     name="订单获取",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/produce_order.png"
 )
 DEVELOPMENT = Template(
     name="研发",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/development.png"
 )
 GOTO_FACTORY = Template(
     name="前往工厂",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/goto_factory.png"
 )
 BACK_TO_QUEUE = Template(
     name="返回制造",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/return_to_factorymain.png"
 )
 SMART_PRODUCTION = Template(
     name="智能制造",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/auto_produce.png"
 )
 SPEEDUP_PRODUCTION = Template(
     name="制造加速",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/speedup_production.png"
 )
 SPEEDUP_15_MIN = Template(
     name="15分钟加速",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/seppdup_15_min.png"
 )
 SPEEDUO_1_HOUR = Template(
     name="1小时加速",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/speedup_1_hour.png"
 )
 SPEEDUO_3_HOUR = Template(
     name="3小时加速",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/speedup_3_hour.png"
 )
 QUEUE_SPEEDUP = Template(
@@ -153,34 +153,34 @@ QUEUE_SPEEDUP = Template(
 )
 CLOSE_FACTORY = Template(
     name="退出工厂",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/button/btn_close1.png"
 )
 
 # 获取新订单
 MORE_ORDER = Template(
     name="更多订单",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/more_order.png"
 )
 BEACON_ORDER = Template(
     name="信标订单",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/fast_forward.png"
 )
 GEC_ORDER = Template(
     name="GEC订单",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/gec_speedup.png"
 )
 BEACON_CONFIRM = Template(
     name="信标确认",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/confirm_delivery.png"
 )
 COLLECT_ALL = Template(
     name="全部领取",
-    threshold=0.85,
+    threshold=0.75,
     template_path=ROOT_DIR / "static/novaimgs/order/collect_all.png"
 )
 ORDER_FINISH = Template(
@@ -294,13 +294,18 @@ class Order(TaskBase):
 
     async def _process_pcba(self):
         self.logging.log(f"{TASK_NAME} 使用电路板 <<<", self.target, logging.DEBUG)
-        await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
-        await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
-        if await self.control.await_element_appear(PCBA_INSUFFICIENT, time_out=2):
+        # await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
+        await self.control.await_text_appear("系统", click=True, time_out=3)
+        # await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
+        await self.control.await_text_appear("订单", click=True, time_out=3)
+        # await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
+        await self.control.await_text_appear("PCBA交付", click=True, time_out=3)
+        # if await self.control.await_element_appear(PCBA_INSUFFICIENT, time_out=2):
+        if await self.control.await_text_appear("道具不足", time_out=2):
             await self.return_home()
             raise OrderFinishes("PCBA道具不足")
-        await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3)
+        # await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3)
+        await self.control.await_text_appear("确定", click=True, time_out=3, sleep=1)
         await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3)
 
     async def _process_manufacture_speedup(self):
@@ -415,7 +420,7 @@ class Order(TaskBase):
         await self.control.await_element_appear(TO_ORDER, click=True, time_out=3, sleep=3)
         if await self.control.matching_one(ORDER_FINISH):
             raise OrderFinishes("今日订单已完成 <<<")
-        await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=3)
+        await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=5)
         await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
 
         # if await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3):
@@ -436,7 +441,9 @@ class Order(TaskBase):
                 await self.return_home()
                 raise OrderFinishes("超空间信标不足,且无法使用GEC购买,订单结束 <<<")
 
-        await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
+        # await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
+        await self.control.await_text_appear("确定", click=True, time_out=3, sleep=1)
+        await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=2, sleep=1)
 
     async def change_talent(self, mode):
         self.logging.log(f"{TASK_NAME} 修改天赋至{mode.name} <<<", self.target, logging.DEBUG)

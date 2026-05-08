@@ -5,3 +5,6 @@
 /test/
 /database/nova_auto_script.db
 .env
+.serena/
+**/__pycache__/
+**/*.pyc
