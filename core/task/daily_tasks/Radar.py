@@ -87,7 +87,7 @@ class Radar(TaskBase):
         if await self.control.await_element_appear(Templates.ATTACK_BUTTON, time_out=2):
             await self.attack(sleet_all=True)
             return
-        if await self.control.await_element_appear(BUTTON_USE, click=True, time_out=2) | await self.control.await_element_appear(BUTTON_BUY, click=True, time_out=2):
+        if await self.control.await_text_appear("使用", click=True, time_out=2) or await self.control.await_text_appear("购买", click=True, time_out=2):
             if self.hidden_policy == "不使用能量道具":
                 raise RadarFinishes("不使用道具,雷达结束")
             if self.hidden_policy in ["使用能量道具", "使用GEC购买能量"]:
