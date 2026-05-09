@@ -42,10 +42,14 @@ class Permanent(TaskBase):
         if not self.module.permanent_order:
             return
 
+        await self.reset_process()
+
+
         self.logging.log("常驻任务 | 订单阶段开始（不使用超空间信标）", self.target, logging.INFO)
         order = Order(self.target)
         order.order_policy = "不使用超空间信标"
-        order.module.order_times = None
+        order.order_hasten_policy = "使用制造加速"
+        order.module.order_times = 1
 
         await order.start()
         self.logging.log("常驻任务 | 订单阶段结束", self.target, logging.INFO)

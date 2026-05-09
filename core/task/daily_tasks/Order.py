@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from re import S
 from typing import List, Any, Optional
 
 from core.LoadTemplates import Template
@@ -190,6 +191,7 @@ ORDER_FINISH = Template(
 )
 
 QHOUR_SPEEDUP_OFFSET_X = 410
+QHOUR_SPEEDUP_OFFSET_X_TEXT = 295
 QHOUR_SPEEDUP_OFFSET_Y = 10
 SPEEDUP_MASK = {
     "retain": [(1300, 130, 1870, 870)],
@@ -276,6 +278,16 @@ class Order(TaskBase):
             return 0
 
     async def order_process(self):
+        await self.return_home()
+        await self.control.await_text_appear("空间站", click=True, time_out=5, exact=True)
+        await self.control.await_text_appear("星系", click=True, time_out=10, exact=True)
+        if not await self.control.await_text_appear("空间站", click=False, time_out=10, exact=True):
+            await asyncio.sleep(5)
+            await self.control.await_text_appear("空间站", click=True, time_out=5, exact=True)
+            await self.control.await_text_appear("星系", click=True, time_out=10, exact=True)
+            if await self.control.await_text_appear("空间站", click=False, time_out=10, exact=True):
+                raise OrderFinishes("空间站加载失败,订单结束 <<<")
+
         # 第一步：切换天赋至 +RC
         await self.change_talent(TALENT_RC)
 
@@ -291,6 +303,8 @@ class Order(TaskBase):
 
         # 第四步： 获取新订单
         await self._fetch_new_order()
+
+
 
     async def _process_pcba(self):
         self.logging.log(f"{TASK_NAME} 使用电路板 <<<", self.target, logging.DEBUG)
@@ -316,19 +330,19 @@ class Order(TaskBase):
             await self.return_home()
             return
 
-        await self.control.await_element_appear(ECONOMY, click=True, time_out=1)
-        if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
-            await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
-            if await self.control.await_element_appear(PRODUCE_ORDER, click=True, time_out=2):
-                await self.control.await_element_appear(GOTO_FACTORY, click=True, time_out=2)
-                if await self.control.await_element_appear(DEVELOPMENT, click=False, time_out=2):
+        await self.control.await_text_appear("经济", click=True, time_out=1)
+        if await self.control.await_text_appear("离开", click=True, time_out=3, debug = True, exact=False):
+            await self.control.await_text_appear("快捷交付", click=True, time_out=2, debug = True)
+            if await self.control.await_text_appear("获取", click=True, time_out=2, debug = True):
+                await self.control.await_text_appear("前往", click=True, time_out=2, debug = True)
+                if await self.control.await_text_appear("研发", click=False, time_out=2, debug = True):
                     raise OrderFinishes("无部件图纸")
-                await self.control.await_element_appear(BACK_TO_QUEUE, click=True, time_out=2)
+                await self.control.await_text_appear("返回队列", click=True, time_out=2, debug = True)
                 # 加速循环
                 speedup_running = True
                 while speedup_running:
                     await asyncio.sleep(2)
-                    await self.control.await_element_appear(SMART_PRODUCTION, click=True, time_out=2, sleep=1.5)
+                    await self.control.await_text_appear("智能生产订单部件", click=True, time_out=2, sleep=1.5)
                     # TODO 看有没有资源不够的弹窗
 
                     if not await self.control.await_element_appear(SPEEDUP_PRODUCTION, click=True, time_out=2):
@@ -353,7 +367,8 @@ class Order(TaskBase):
                         for speeduo_policy in self.order_speeduo_policy:
                             if fabricate_time >= SPEEDUP_SECOND[speeduo_policy]:
                                 if speeduo_policy == "15_min" and props_remaining['15_min']:
-                                    await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                                    await self.control.await_text_appear("15分钟部件加速", click=True, time_out=2, debug = True, offset_x=QHOUR_SPEEDUP_OFFSET_X_TEXT, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5, exact=False)
+                                    #await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
                                     break
                                 elif speeduo_policy == "1_hour" and props_remaining['1_hour']:
                                     await self.control.await_element_appear(SPEEDUO_1_HOUR, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
@@ -364,7 +379,8 @@ class Order(TaskBase):
                                 # 如果当前策略阈值满足但对应道具没有库存，尝试下一个策略
                                 continue
 
-                        await self.control.await_element_appear(QUEUE_SPEEDUP, click=True, time_out=2, sleep=1)
+                        await self.control.await_text_appear("使用×", click=True, time_out=2, debug = True, sleep=1, exact=False)
+                        #await self.control.await_element_appear(QUEUE_SPEEDUP, click=True, time_out=2, sleep=1)
 
                         img = self.image_tool.apply_mask(self.device.get_screencap(), SPEEDUP_MASK)
                         fabricate_ocr = await self.ocr.async_ocr(provider=self.ocr_tool, image=img)
@@ -376,7 +392,8 @@ class Order(TaskBase):
                             break
 
                         if fabricate_time and fabricate_time <= SPEEDUP_SECOND['15_min']:
-                            await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                            await self.control.await_text_appear("15分钟部件加速", click=True, time_out=2, debug = True, offset_x=QHOUR_SPEEDUP_OFFSET_X_TEXT, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5, exact=False)
+                            #await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
                             break
                         if fabricate_time == 0:
                             break
@@ -401,27 +418,31 @@ class Order(TaskBase):
     async def _submit_remaining_orders(self):
         # 如果还能打开制造面板说明还有订单未提交，尝试收集并继续
         if await self.control.await_element_appear(TO_CONTROL_PANEL_GOLD, click=True, time_out=2) | await self.control.await_element_appear(TO_CONTROL_PANEL_BLUE, click=True, time_out=2):
-            if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
-                await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=2)
-                if not await self.control.await_element_appear(PRODUCE_ORDER, click=False, time_out=2):
-                    if await self.control.await_element_appear(ORDER_IS_HERE, click=True, time_out=3):
+            if await self.control.await_text_appear("离开", click=True, time_out=3, debug = True, exact=False):
+                await self.control.await_text_appear("快捷交付", click=True, time_out=2, debug = True)
+                if not await self.control.await_text_appear("获取", click=True, time_out=2, debug = True):
+                    if await self.control.await_text_appear("离开", click=True, time_out=3, debug = True, exact=False):
                         await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3)
                 else:
                     await self.device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200)
                     await asyncio.sleep(2)
-                    await self.control.matching_one(COLLECT_ALL, click=True, sleep=1)
+                    await self.control.await_text_appear("全部领取", click=True, time_out=2, debug = True, sleep=1)
                     await self.device.swipe([(1000, 100), (1000, 110), (1000, 150), (1000, 950)], 200)
                     await asyncio.sleep(2)
-                    await self.control.await_element_appear(QUICK_DELIVER, click=True, time_out=3)
+                    await self.control.await_text_appear("快捷交付", click=True, time_out=2, debug = True)
 
     async def _fetch_new_order(self):
         self.logging.log(f"{TASK_NAME} 获取新订单 >>>", self.target, logging.DEBUG)
-        await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_element_appear(TO_ORDER, click=True, time_out=3, sleep=3)
-        if await self.control.matching_one(ORDER_FINISH):
+#        await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
+        await self.control.await_text_appear("系统", click=True, time_out=3, debug = True)
+        #await self.control.await_element_appear(TO_ORDER, click=True, time_out=3, sleep=3)
+        await self.control.await_text_appear("订单", click=True, time_out=3, debug = True)
+        if await self.control.await_text_appear("所有的订单", click=True, time_out=3, debug = True, exact=False):
             raise OrderFinishes("今日订单已完成 <<<")
+
         await self.control.await_element_appear(ORDER_DEPARTURE, click=True, time_out=5)
         await self.control.await_element_appear(ORDER_CLOSE, click=True, time_out=3)
+
 
         # if await self.control.await_element_appear(MORE_ORDER, click=True, time_out=3):
         await self._handle_more_order()
@@ -447,8 +468,8 @@ class Order(TaskBase):
 
     async def change_talent(self, mode):
         self.logging.log(f"{TASK_NAME} 修改天赋至{mode.name} <<<", self.target, logging.DEBUG)
-        await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_element_appear(Templates.MORE_SYSTEM, click=True, time_out=3)
+        await self.control.await_text_appear("系统", click=True, time_out=3)
+        await self.control.await_text_appear("更多", click=True, time_out=3)
         await self.control.await_element_appear(TO_TALENT, click=True, time_out=3)
         await self.control.await_element_appear(TALENT_CHOICE, click=True, time_out=3)
         await self.control.await_element_appear(mode, click=True, time_out=3)

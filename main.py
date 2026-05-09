@@ -1,11 +1,27 @@
 import logging
 import os
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
-from app.GuiApp import GuiApp
 from database.db_session import init_database
+
+
+def configure_stdio_encoding():
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not reconfigure:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except Exception:
+            pass
+
+
+configure_stdio_encoding()
+
+from app.GuiApp import GuiApp
 
 
 def log_init():

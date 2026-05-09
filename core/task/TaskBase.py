@@ -55,6 +55,14 @@ class TaskBase:
         """更新任务状态"""
         self.status = status
 
+    @staticmethod
+    def _enabled(value):
+        if isinstance(value, memoryview):
+            value = value.tobytes()
+        if isinstance(value, bytes):
+            return value not in (b'', b'\x00', b'0', b'False', b'false')
+        return bool(value)
+
     async def return_home(self):
         await self.relogin_check()
         await self.close_check()
@@ -62,23 +70,41 @@ class TaskBase:
         await self.shortcut_check()
         await self.select_fleet_check()
         await self.none_available_check()
-        await self.sign_back_check()
         await self.disconnected_check()
         await self.control.matching_one(Templates.TO_HOME, click=True)
 
     async def relogin_check(self):
         """检查是否需要重新登录"""
-        if await self.control.matching_one(Templates.SIGN_BACK_IN):
-            if self.module.auto_relogin:
-                relogin_time = self.module.relogin_time
-                self.logging.log(f"检测到已登出，等待 {relogin_time} 秒后重新登录...", self.target, logging.INFO)
-                if relogin_time is None:
-                    relogin_time = 600
-                await asyncio.sleep(relogin_time)
-                await self.control.matching_one(Templates.CONFIRM_RELOGIN, click=True, sleep=10)
-                self.logging.log("重新登录成功！", self.target, logging.INFO)
-            else:
-                raise TaskFinishes("检测到已登出, 未开启自动抢登, 执行结束")
+
+        #if not await self.control.matching_one(Templates.SIGN_BACK_IN):
+        #    return False
+
+        if not await self.control.await_text_appear("请重新登录", click=False, exact=False):
+            return False
+
+        self.module = Module.get(Module.name == self.target)
+        if not self._enabled(self.module.auto_relogin):
+            raise TaskFinishes("检测到已登出, 未开启自动抢登, 执行结束")
+
+        relogin_time = self.module.relogin_time
+        if relogin_time is None:
+            relogin_time = 600
+
+        self.logging.log(f"检测到已登出，等待 {relogin_time} 秒后重新登录...", self.target, logging.INFO)
+        await asyncio.sleep(relogin_time)
+
+        if not await self.control.await_text_appear(
+            "确定",
+            click=True,
+            time_out=30,
+            sleep=1,
+        ):
+            raise TaskFinishes("检测到已登出, 但未找到重新登录确认按钮")
+
+        await asyncio.sleep(30)
+
+        self.logging.log("重新登录成功！", self.target, logging.INFO)
+        return True
 
     async def close_check(self):
         for template in Templates.CLOSE_BUTTONS:
@@ -101,8 +127,7 @@ class TaskBase:
             await self.device.click_back()
 
     async def sign_back_check(self):
-        if await self.control.matching_one(Templates.SIGN_BACK_IN):
-            await self.control.matching_one(Templates.CONFIRM_RELOGIN, click=True, sleep=10)
+        await self.relogin_check()
 
     async def disconnected_check(self):
         if await self.control.matching_one(Templates.DISCONNECTED):
@@ -111,9 +136,9 @@ class TaskBase:
     async def attack(self, sleet_all=False):
         self.revenge = False
         await self.control.await_text_appear("攻击", click=True, time_out=3)
-        if await self.control.await_text_appear("仇恨值已满", exact=False, time_out=3):
+        if await self.control.await_text_appear("仇恨值已满", exact=False, time_out=2):
             self.revenge = True
-            await self.control.await_text_appear("攻击", click=True, time_out=3)
+            await self.control.await_text_appear("攻击", click=True, sleep=1)
         await self.control.matching_text("快速维修", click=True, sleep=1)
         fleets = json.loads(self.module.attack_fleet)
         if "all" in fleets or sleet_all:

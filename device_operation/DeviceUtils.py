@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 import cv2
+from loguru import logger as loguru_logger
 from msc.adbcap import ADBCap
 from msc.droidcast import DroidCast
 from msc.minicap import MiniCap
@@ -24,6 +25,44 @@ from mtc.touch import Touch
 from core.LogManager import LogManager
 from device_operation.AdbClient import AdbClient
 from models import Config, Module
+
+
+def _safe_console_sink(message):
+    text = str(message)
+    stream = sys.stderr
+    try:
+        stream.write(text)
+    except UnicodeEncodeError:
+        encoding = stream.encoding or "utf-8"
+        safe_text = text.encode(encoding, errors="backslashreplace").decode(encoding, errors="replace")
+        stream.write(safe_text)
+    stream.flush()
+
+
+def _configure_loguru_for_touch_tools():
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if not reconfigure:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="backslashreplace")
+        except Exception:
+            pass
+
+    try:
+        loguru_logger.remove()
+    except ValueError:
+        pass
+    loguru_logger.add(
+        _safe_console_sink,
+        level="INFO",
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
+        colorize=False,
+        catch=True,
+    )
+
+
+_configure_loguru_for_touch_tools()
 
 if sys.platform == 'win32':
     try:
