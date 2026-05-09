@@ -72,6 +72,7 @@ class Radar(TaskBase):
         try:
             if hidden_times:
                 for i in range(hidden_times):
+                    await self.return_home()
                     await self.radar_process()
             else:
                 while True:

@@ -76,10 +76,10 @@ class TaskBase:
     async def relogin_check(self):
         """检查是否需要重新登录"""
 
-        #if not await self.control.matching_one(Templates.SIGN_BACK_IN):
+        # if not await self.control.matching_one(Templates.SIGN_BACK_IN):
         #    return False
 
-        if not await self.control.await_text_appear("请重新登录", click=False, exact=False):
+        if not await self.control.matching_text("请重新登录", click=False, exact=False):
             return False
 
         self.module = Module.get(Module.name == self.target)
@@ -93,15 +93,10 @@ class TaskBase:
         self.logging.log(f"检测到已登出，等待 {relogin_time} 秒后重新登录...", self.target, logging.INFO)
         await asyncio.sleep(relogin_time)
 
-        if not await self.control.await_text_appear(
-            "确定",
-            click=True,
-            time_out=30,
-            sleep=1,
-        ):
+        if not await self.control.await_text_appear("确定", click=True, time_out=30, sleep=1,):
             raise TaskFinishes("检测到已登出, 但未找到重新登录确认按钮")
 
-        await asyncio.sleep(30)
+        # await asyncio.sleep(30)
 
         self.logging.log("重新登录成功！", self.target, logging.INFO)
         return True
