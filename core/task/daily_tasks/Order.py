@@ -370,10 +370,12 @@ class Order(TaskBase):
                                     # await self.control.await_element_appear(SPEEDUP_15_MIN, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
                                     break
                                 elif speeduo_policy == "1_hour" and props_remaining['1_hour']:
-                                    await self.control.await_element_appear(SPEEDUO_1_HOUR, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                                    await self.control.await_text_appear("1小时部件加速", click=True, time_out=2, debug=True, offset_x=QHOUR_SPEEDUP_OFFSET_X_TEXT, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5, exact=False)
+                                    #await self.control.await_element_appear(SPEEDUO_1_HOUR, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
                                     break
                                 elif speeduo_policy == "3_hour" and props_remaining['3_hour']:
-                                    await self.control.await_element_appear(SPEEDUO_3_HOUR, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
+                                    await self.control.await_text_appear("3小时部件加速", click=True, time_out=2, debug=True, offset_x=QHOUR_SPEEDUP_OFFSET_X_TEXT, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5, exact=False)
+                                    #await self.control.await_element_appear(SPEEDUO_3_HOUR, click=True, time_out=2, offset_x=QHOUR_SPEEDUP_OFFSET_X, offset_y=QHOUR_SPEEDUP_OFFSET_Y, sleep=1.5)
                                     break
                                 # 如果当前策略阈值满足但对应道具没有库存，尝试下一个策略
                                 continue
