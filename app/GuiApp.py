@@ -358,14 +358,7 @@ class GuiApp:
         dialog.close()
 
     def check_update(self):
-        # res = requests.get('')
-        ui.html('<style>.multi-line-notification { white-space: pre-line; }</style>')
-        ui.notify(
-            '检查更新\n'
-            '无更新',
-            multi_line=True,
-            classes='multi-line-notification',
-        )
+        ui.timer(1.0, self.settings_page.check_update_silently, once=True)
 
     def check_path(self):
         root_path = Path(__file__).parent
@@ -381,6 +374,7 @@ class GuiApp:
         """启动应用"""
         app.on_startup(self.on_startup)
         app.on_shutdown(self.on_close)
+        app.native.settings['ALLOW_DOWNLOADS'] = True
         self.load_tabs()
         self.check_update()
         self.check_path()

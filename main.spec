@@ -37,7 +37,8 @@ models = [
     (f'{Path(nicegui.__file__).parent}', 'nicegui'),
     (f'{Path(msc.__file__).parent}', 'msc'),
     (f'{Path(mtc.__file__).parent}', 'mtc'),
-    ("static", "static")
+    ("static", "static"),
+    ("pyproject.toml", "."),
 ]
 # -- --
 datas = rapidocr_data + models
