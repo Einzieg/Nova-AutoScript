@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from watchfiles import awatch
+
 from core.NovaException import RadarFinishes
 from core.LoadTemplates import Template
 from core.task.TaskBase import *
@@ -84,11 +86,8 @@ class Radar(TaskBase):
 
     async def radar_process(self):
         await self.control.await_element_appear(RADAR, click=True, time_out=3)
-        await self.control.await_element_appear(SEARCH, click=True, time_out=3)
-        if await self.control.await_element_appear(Templates.ATTACK_BUTTON, time_out=2):
-            await self.attack(sleet_all=True)
-            return
-        if await self.control.await_text_appear("使用", click=True, time_out=2) or await self.control.await_text_appear("购买", click=True, time_out=2):
+        await self.control.await_text_appear("搜索", click=True, time_out=3)
+        if await self.control.await_text_appear("使用", click=True, time_out=1) or await self.control.await_text_appear("购买", click=True, time_out=1):
             if self.hidden_policy == "不使用能量道具":
                 raise RadarFinishes("不使用道具,雷达结束")
             if self.hidden_policy in ["使用能量道具", "使用GEC购买能量"]:
@@ -98,7 +97,19 @@ class Radar(TaskBase):
                         await self.control.await_element_appear(GEC, click=True, time_out=1, sleep=1)
                     else:
                         raise RadarFinishes("不使用GEC购买道具,雷达结束")
-                await self.control.await_element_appear(SEARCH, click=True, time_out=1, sleep=1)
+                await self.control.await_text_appear("搜索", click=True, time_out=1, sleep=1)
             else:
                 raise RadarFinishes("道具耗尽,雷达结束")
-        await self.attack(sleet_all=True)
+        if await self.control.await_text_appear("仇恨值已满", exact=False, time_out=2):
+            await self.control.await_text_appear("攻击", click=True, sleep=1)
+        self.logging.log("检查是否进入战斗 >>>", self.target, logging.DEBUG)
+        if await self.control.await_text_appear("战斗中", time_out=60, exact=False):
+            self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
+            self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
+            if await self.control.await_text_disappear("战斗中", time_out=10, sleep=3, exact=False):
+                self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
+                return
+        if await self.control.await_text_appear("前往", click=True, time_out=2):
+            await self.control.await_element_appear(Templates.ATTACK_BUTTON, time_out=2)
+            await self.attack(sleet_all=True)
+            return
