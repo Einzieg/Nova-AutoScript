@@ -222,7 +222,7 @@ class Permanent(TaskBase):
         await self._open_planet_transform()
         await self.control.await_text_appear(resource_name, click=True, time_out=5, sleep=1, exact=False)
         await self.control.await_text_appear("全部收取", click=True, time_out=2, sleep=1)
-        await self.control.await_text_appear("关闭", click=True, time_out=5, sleep=1)
+        await self.control.await_text_appear("关闭", click=True, time_out=5, sleep=1, exact=False)
 
     async def _open_planet_transform(self):
         await self.control.await_text_appear("系统", click=True, time_out=3)
