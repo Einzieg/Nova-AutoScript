@@ -220,7 +220,7 @@ class Permanent(TaskBase):
 
     async def _collect_planet_resource_section(self, resource_name: str):
         await self._open_planet_transform()
-        await self.control.await_text_appear(resource_name, click=True, time_out=5, sleep=1)
+        await self.control.await_text_appear(resource_name, click=True, time_out=5, sleep=1, exact=False)
         await self.control.await_text_appear("全部收取", click=True, time_out=2, sleep=1)
         await self.control.await_text_appear("关闭", click=True, time_out=5, sleep=1)
 

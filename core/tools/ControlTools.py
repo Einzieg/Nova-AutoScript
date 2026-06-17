@@ -32,8 +32,9 @@ class ControlTools:
             (1680, 250, 1920, 750)  # 右侧活动及快捷菜单
         ]
 
-    async def matching_one(self, template: Template, click=False, sleep=0.5, offset_x=0, offset_y=0):
-        image = self.device.get_screencap()
+    async def matching_one(self, template: Template, click=False, sleep=0.5, offset_x=0, offset_y=0, image=None):
+        if image is None:
+            image = self.device.get_screencap()
         cv_tmp = template.cv_tmp
 
         if template.forbidden:
@@ -78,8 +79,10 @@ class ControlTools:
         exact=True,
         case_sensitive=False,
         debug=False,
+        image=None
     ):
-        image = self.device.get_screencap()
+        if image is None:
+            image = self.device.get_screencap()
         try:
             ocr_result = await self.ocr.async_ocr(provider=provider, image=image, include_location=True)
             if not ocr_result.get('success'):
@@ -145,8 +148,9 @@ class ControlTools:
             if sleep is not None and sleep > 0:
                 await asyncio.sleep(sleep)
 
-    async def matching_all(self, template: Template):
-        image = self.device.get_screencap()
+    async def matching_all(self, template: Template, image=None):
+        if image is None:
+            image = self.device.get_screencap()
         cv_tmp = template.cv_tmp
         if template.forbidden:
             for zone in self.forbidden_zones:
