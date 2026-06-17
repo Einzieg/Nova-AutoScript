@@ -212,7 +212,7 @@ class Permanent(TaskBase):
         self.logging.log("采集星球资源 | 资源枢纽完成，重置视角", self.target, logging.INFO)
         await self.reset_process()
 
-        await self._collect_planet_resource_section("异象观测站")
+        await self._collect_planet_resource_section("异象")
 
         await asyncio.sleep(3)
         self.logging.log("采集星球资源 | 流程结束", self.target, logging.INFO)
