@@ -63,8 +63,12 @@ class TaskBase:
             return value not in (b'', b'\x00', b'0', b'False', b'false')
         return bool(value)
 
-    async def return_home(self):
-        image = self.device.get_screencap()
+    async def return_home(self, optimize = False):
+        if optimize:
+            image = self.device.get_screencap()
+        else:
+            image = None
+            
         await self.relogin_check(image)
         await self.close_check(image)
         await self.recall_check(image)
