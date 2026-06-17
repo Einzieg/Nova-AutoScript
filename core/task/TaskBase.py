@@ -64,22 +64,23 @@ class TaskBase:
         return bool(value)
 
     async def return_home(self):
-        await self.relogin_check()
-        await self.close_check()
-        await self.recall_check()
-        await self.shortcut_check()
-        await self.select_fleet_check()
-        await self.none_available_check()
-        await self.disconnected_check()
-        await self.control.matching_one(Templates.TO_HOME, click=True)
+        image = self.device.get_screencap()
+        await self.relogin_check(image)
+        await self.close_check(image)
+        await self.recall_check(image)
+        await self.shortcut_check(image)
+        await self.select_fleet_check(image)
+        await self.none_available_check(image)
+        await self.disconnected_check(image)
+        await self.control.matching_one(Templates.TO_HOME, click=True, image=image)
 
-    async def relogin_check(self):
+    async def relogin_check(self, image = None):
         """检查是否需要重新登录"""
 
         # if not await self.control.matching_one(Templates.SIGN_BACK_IN):
         #    return False
 
-        if not await self.control.matching_text("请重新登录", click=False, exact=False):
+        if not await self.control.matching_text("请重新登录", click=False, exact=False, image=image):
             return False
 
         self.module = Module.get(Module.name == self.target)
@@ -93,7 +94,7 @@ class TaskBase:
         self.logging.log(f"检测到已登出，等待 {relogin_time} 秒后重新登录...", self.target, logging.INFO)
         await asyncio.sleep(relogin_time)
 
-        if not await self.control.await_text_appear("确定", click=True, time_out=30, sleep=1,):
+        if not await self.control.await_text_appear("确定", click=True, time_out=30, sleep=1):
             raise TaskFinishes("检测到已登出, 但未找到重新登录确认按钮")
 
         # await asyncio.sleep(30)
@@ -101,31 +102,31 @@ class TaskBase:
         self.logging.log("重新登录成功！", self.target, logging.INFO)
         return True
 
-    async def close_check(self):
+    async def close_check(self, image = None):
         for template in Templates.CLOSE_BUTTONS:
-            await self.control.matching_one(template, click=True)
+            await self.control.matching_one(template, click=True, image=image)
 
-    async def recall_check(self):
-        if await self.control.matching_one(Templates.RECALL):
+    async def recall_check(self, image = None):
+        if await self.control.matching_one(Templates.RECALL, image=image):
             await self.device.click_back()
 
-    async def shortcut_check(self):
-        if await self.control.matching_one(Templates.IN_SHORTCUT):
+    async def shortcut_check(self, image = None):
+        if await self.control.matching_one(Templates.IN_SHORTCUT, image=image):
             await self.device.click_back()
 
-    async def select_fleet_check(self):
-        if await self.control.matching_one(Templates.SELECTALL):
+    async def select_fleet_check(self, image = None):
+        if await self.control.matching_one(Templates.SELECTALL, image=image):
             await self.device.click_back()
 
-    async def none_available_check(self):
-        if await self.control.matching_one(Templates.NO_WORKSHIPS):
+    async def none_available_check(self, image = None):
+        if await self.control.matching_one(Templates.NO_WORKSHIPS, image=image):
             await self.device.click_back()
 
     async def sign_back_check(self):
         await self.relogin_check()
 
-    async def disconnected_check(self):
-        if await self.control.matching_one(Templates.DISCONNECTED):
+    async def disconnected_check(self, image = None):
+        if await self.control.matching_one(Templates.DISCONNECTED, image=image):
             raise TaskFinishes("无法连接到网络")
 
     async def attack(self, sleet_all=False):
