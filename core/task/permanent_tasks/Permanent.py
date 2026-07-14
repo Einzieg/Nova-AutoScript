@@ -1,5 +1,7 @@
 from core.task.TaskBase import *
 from core.task.daily_tasks.Order import Order
+from core.LoadTemplates import Template
+
 
 TASK_NAME = "常驻任务"
 
@@ -50,7 +52,8 @@ class Permanent(TaskBase):
         order.order_policy = "不使用超空间信标"
         order.order_hasten_policy = "使用制造加速"
         order.module.order_times = 1
-
+        
+        await order.prepare()
         await order.start()
         self.logging.log("常驻任务 | 订单阶段结束", self.target, logging.INFO)
 
@@ -204,30 +207,22 @@ class Permanent(TaskBase):
 
         self.logging.log("采集星球资源 | 流程开始", self.target, logging.INFO)
         await self.reset_process()
+
+        has_panel = await self.control.await_element_appear(Templates.TO_CONTROL_PANEL_GOLD, click=True, time_out=1) | await self.control.await_element_appear(Templates.TO_CONTROL_PANEL_BLUE, click=True, time_out=1)
+        if not has_panel:
+            await self.return_home()
+            return
+
+        await self.control.await_text_appear("行星改造", click=True, time_out=5, exact=False)
+        await self.control.await_text_appear("全部领取", click=True, time_out=5, exact=False)
+
+        await asyncio.sleep(3)
+
+        await self.return_home()
+
         self.logging.log("采集星球资源 | reset_process 完成", self.target, logging.INFO)
-
-        await self._collect_planet_resource_section("资源枢纽")
-
-        await asyncio.sleep(3)
-        self.logging.log("采集星球资源 | 资源枢纽完成，重置视角", self.target, logging.INFO)
-        await self.reset_process()
-
-        await self._collect_planet_resource_section("异象")
-
-        await asyncio.sleep(3)
-        self.logging.log("采集星球资源 | 流程结束", self.target, logging.INFO)
+        
         return
-
-    async def _collect_planet_resource_section(self, resource_name: str):
-        await self._open_planet_transform()
-        await self.control.await_text_appear(resource_name, click=True, time_out=5, sleep=1, exact=False)
-        await self.control.await_text_appear("全部收取", click=True, time_out=2, sleep=1)
-        await self.control.await_text_appear("关闭", click=True, time_out=5, sleep=1, exact=False)
-
-    async def _open_planet_transform(self):
-        await self.control.await_text_appear("系统", click=True, time_out=3)
-        await self.control.await_text_appear("更多", click=True, time_out=3)
-        await self.control.await_text_appear("行星改造", click=True, time_out=5, sleep=1)
 
     async def reset_process(self):
         await self.return_home()
