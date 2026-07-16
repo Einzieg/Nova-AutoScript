@@ -215,10 +215,14 @@ class Permanent(TaskBase):
 
         await self.control.await_text_appear("行星改造", click=True, time_out=5, exact=False)
         await self.control.await_text_appear("全部领取", click=True, time_out=5, exact=False)
+        if await self.control.await_text_appear("获得物品", click=False, time_out=5, exact=False):
+            await self.device.click_back()
+            await asyncio.sleep(3)
+            await self.device.click_back()
+        else:
+            await self.device.click_back()
+            await asyncio.sleep(3)
 
-        await asyncio.sleep(3)
-
-        await self.return_home()
 
         self.logging.log("采集星球资源 | reset_process 完成", self.target, logging.INFO)
         
