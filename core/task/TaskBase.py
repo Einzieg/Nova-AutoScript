@@ -76,7 +76,24 @@ class TaskBase:
         await self.select_fleet_check(image)
         await self.none_available_check(image)
         await self.disconnected_check(image)
+        await self.game_quit_check(image)
         await self.control.matching_one(Templates.TO_HOME, click=True, image=image)
+
+    async def game_quit_check(self, image = None):
+        """检查游戏是否已经关闭"""
+        if not await self.control.matching_text("新星帝国", click=True, exact=True, image=image):
+            self.logging.log(f"未检测到游戏关闭...", self.target, logging.INFO)
+            return False
+
+        game_start_time = 120
+        self.logging.log(f"检测到游戏关闭，等待{game_start_time}秒...", self.target, logging.INFO)
+        await asyncio.sleep(game_start_time)
+
+        if not await self.control.await_text_appear("星系", click=True, time_out=30, sleep=1):
+            raise TaskFinishes("检测到游戏关闭, 但未找到星系")
+
+        self.logging.log("重新启动游戏成功！", self.target, logging.INFO)
+        return True
 
     async def relogin_check(self, image = None):
         """检查是否需要重新登录"""

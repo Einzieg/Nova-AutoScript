@@ -216,17 +216,34 @@ class Permanent(TaskBase):
         await self.control.await_text_appear("行星改造", click=True, time_out=5, exact=False)
         await self.control.await_text_appear("全部领取", click=True, time_out=5, exact=False)
         if await self.control.await_text_appear("获得物品", click=False, time_out=5, exact=False):
-            await self.device.click_back()
+            self.logging.log("采集星球资源 | 获得物品 完成， 开始关闭", self.target, logging.INFO)
+            await self.close_check()
             await asyncio.sleep(3)
-            await self.device.click_back()
+            await self.click_back()
+            await self.close_game_check(self)
+
+            #coordinate = 200,300
+            #await self.device.click(coordinate)
         else:
-            await self.device.click_back()
-            await asyncio.sleep(3)
+            #coordinate = 200,300
+            #await self.device.click(coordinate)
+            await self.click_back()
+            await self.close_game_check(self)
+
+        await asyncio.sleep(3)
 
 
         self.logging.log("采集星球资源 | reset_process 完成", self.target, logging.INFO)
         
-        return
+        return True
+
+    async def close_game_check(self):
+        if not await self.control.await_text_appear("确定退出吗", click=True, time_out=5, exact=False):
+            return False
+        
+        await self.control.await_text_appear("取消", click=True, time_out=3, exact=False)
+
+        return True
 
     async def reset_process(self):
         await self.return_home()
