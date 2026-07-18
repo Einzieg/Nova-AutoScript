@@ -219,7 +219,7 @@ class Permanent(TaskBase):
             self.logging.log("采集星球资源 | 获得物品 完成， 开始关闭", self.target, logging.INFO)
             await self.close_check()
             await asyncio.sleep(3)
-            await self.click_back()
+            await self.device.click_back()
             await self.close_game_check(self)
 
             #coordinate = 200,300
@@ -227,7 +227,7 @@ class Permanent(TaskBase):
         else:
             #coordinate = 200,300
             #await self.device.click(coordinate)
-            await self.click_back()
+            await self.device.click_back()
             await self.close_game_check(self)
 
         await asyncio.sleep(3)
