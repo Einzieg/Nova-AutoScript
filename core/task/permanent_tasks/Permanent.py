@@ -217,10 +217,11 @@ class Permanent(TaskBase):
         await self.control.await_text_appear("全部领取", click=True, time_out=5, exact=False)
         if await self.control.await_text_appear("获得物品", click=False, time_out=5, exact=False):
             self.logging.log("采集星球资源 | 获得物品 完成， 开始关闭", self.target, logging.INFO)
-            await self.close_check()
+            image = self.device.get_screencap()
+            await self.close_check(image)
             await asyncio.sleep(3)
             await self.device.click_back()
-            await self.close_game_check(self)
+            await self.close_game_check()
 
             #coordinate = 200,300
             #await self.device.click(coordinate)
@@ -228,7 +229,7 @@ class Permanent(TaskBase):
             #coordinate = 200,300
             #await self.device.click(coordinate)
             await self.device.click_back()
-            await self.close_game_check(self)
+            await self.close_game_check()
 
         await asyncio.sleep(3)
 
