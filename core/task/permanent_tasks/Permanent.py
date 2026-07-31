@@ -94,6 +94,7 @@ class Permanent(TaskBase):
 
             if await self.control.matching_one(Templates.RECALL):
                 await self.device.click_back()
+                await asyncio.sleep(1)
                 continue
 
             collect_clicked = await self.control.await_element_appear(
