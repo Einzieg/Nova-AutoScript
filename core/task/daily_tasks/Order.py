@@ -7,6 +7,7 @@ from core.LoadTemplates import Template
 from core.NovaException import OrderFinishes
 from core.task.TaskBase import *
 from core.tools.OcrTools import OcrTools
+from core.tools.ScreenRegions import LOWER_RIGHT, ScreenTile
 from core.tools.TimeTools import TimeTools
 from core.tools.ImageTools import ImageTools
 
@@ -279,13 +280,25 @@ class Order(TaskBase):
 
     async def order_process(self):
         await self.return_home()
-        await self.control.await_text_appear("空间站", click=True, time_out=5, exact=True)
-        await self.control.await_text_appear("星系", click=True, time_out=10, exact=True)
-        if not await self.control.await_text_appear("空间站", click=False, time_out=10, exact=True):
+        await self.control.await_text_appear(
+            "空间站", click=True, time_out=5, exact=True, region=ScreenTile.BOTTOM_RIGHT
+        )
+        await self.control.await_text_appear(
+            "星系", click=True, time_out=10, exact=True, region=ScreenTile.BOTTOM_RIGHT
+        )
+        if not await self.control.await_text_appear(
+            "空间站", click=False, time_out=10, exact=True, region=ScreenTile.BOTTOM_RIGHT
+        ):
             await asyncio.sleep(5)
-            await self.control.await_text_appear("空间站", click=True, time_out=5, exact=True)
-            await self.control.await_text_appear("星系", click=True, time_out=10, exact=True)
-            if await self.control.await_text_appear("空间站", click=False, time_out=10, exact=True):
+            await self.control.await_text_appear(
+                "空间站", click=True, time_out=5, exact=True, region=ScreenTile.BOTTOM_RIGHT
+            )
+            await self.control.await_text_appear(
+                "星系", click=True, time_out=10, exact=True, region=ScreenTile.BOTTOM_RIGHT
+            )
+            if await self.control.await_text_appear(
+                "空间站", click=False, time_out=10, exact=True, region=ScreenTile.BOTTOM_RIGHT
+            ):
                 raise OrderFinishes("空间站加载失败,订单结束 <<<")
 
         # 第一步：切换天赋至 +RC
@@ -307,7 +320,9 @@ class Order(TaskBase):
     async def _process_pcba(self):
         self.logging.log(f"{TASK_NAME} 使用电路板 <<<", self.target, logging.DEBUG)
         # await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_text_appear("系统", click=True, time_out=3)
+        await self.control.await_text_appear(
+            "系统", click=True, time_out=3, region=ScreenTile.BOTTOM_LEFT
+        )
         # await self.control.await_element_appear(TO_ORDER, click=True, time_out=3)
         await self.control.await_text_appear("订单", click=True, time_out=3)
         # await self.control.await_element_appear(PCBA_DELIVERY, click=True, time_out=3)
@@ -317,7 +332,9 @@ class Order(TaskBase):
             await self.return_home()
             raise OrderFinishes("PCBA道具不足")
         # await self.control.await_element_appear(DELIVERY_CONFIRM, click=True, time_out=3)
-        await self.control.await_text_appear("确定", click=True, time_out=3, sleep=1)
+        await self.control.await_text_appear(
+            "确定", click=True, time_out=3, sleep=1, region=LOWER_RIGHT
+        )
         await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=3)
 
     async def _process_manufacture_speedup(self):
@@ -427,7 +444,14 @@ class Order(TaskBase):
                 else:
                     await self.device.swipe([(1000, 950), (1000, 950), (1000, 900), (1000, 100)], 200)
                     await asyncio.sleep(2)
-                    await self.control.await_text_appear("全部领取", click=True, time_out=2, debug=True, sleep=1)
+                    await self.control.await_text_appear(
+                        "全部领取",
+                        click=True,
+                        time_out=2,
+                        debug=True,
+                        sleep=1,
+                        region=ScreenTile.BOTTOM_RIGHT,
+                    )
                     await self.device.swipe([(1000, 100), (1000, 110), (1000, 150), (1000, 950)], 200)
                     await asyncio.sleep(2)
                     await self.control.await_text_appear("快捷交付", click=True, time_out=2, debug=True)
@@ -435,7 +459,9 @@ class Order(TaskBase):
     async def _fetch_new_order(self):
         self.logging.log(f"{TASK_NAME} 获取新订单 >>>", self.target, logging.DEBUG)
         # await self.control.await_element_appear(Templates.TO_SYSTEM, click=True, time_out=3)
-        await self.control.await_text_appear("系统", click=True, time_out=3, debug=True)
+        await self.control.await_text_appear(
+            "系统", click=True, time_out=3, debug=True, region=ScreenTile.BOTTOM_LEFT
+        )
         # await self.control.await_element_appear(TO_ORDER, click=True, time_out=3, sleep=3)
         await self.control.await_text_appear("订单", click=True, time_out=3, debug=True)
         if await self.control.await_text_appear("所有的订单", click=True, time_out=3, debug=True, exact=False):
@@ -463,12 +489,16 @@ class Order(TaskBase):
                 raise OrderFinishes("超空间信标不足,且无法使用GEC购买,订单结束 <<<")
 
         # await self.control.await_element_appear(BEACON_CONFIRM, click=True, time_out=3)
-        await self.control.await_text_appear("确定", click=True, time_out=3, sleep=1)
+        await self.control.await_text_appear(
+            "确定", click=True, time_out=3, sleep=1, region=LOWER_RIGHT
+        )
         await self.control.await_element_appear(Templates.TO_HOME, click=True, time_out=2, sleep=1)
 
     async def change_talent(self, mode):
         self.logging.log(f"{TASK_NAME} 修改天赋至{mode.name} <<<", self.target, logging.DEBUG)
-        await self.control.await_text_appear("系统", click=True, time_out=3)
+        await self.control.await_text_appear(
+            "系统", click=True, time_out=3, region=ScreenTile.BOTTOM_LEFT
+        )
         await self.control.await_text_appear("更多", click=True, time_out=3)
         await self.control.await_element_appear(TO_TALENT, click=True, time_out=3)
         await self.control.await_element_appear(TALENT_CHOICE, click=True, time_out=3)

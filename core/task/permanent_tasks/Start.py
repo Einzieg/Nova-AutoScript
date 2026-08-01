@@ -1,4 +1,5 @@
 from core.task.TaskBase import *
+from core.tools.ScreenRegions import CENTER_BOTTOM
 
 TASK_NAME = "启动"
 
@@ -35,6 +36,6 @@ class Start(TaskBase):
                 self.logging.log("游戏启动失败,尝试重启", self.target)
                 await self.device.close_app()
                 await self.start()
-            await self.control.matching_text("确定", click=True)
+            await self.control.matching_text("确定", click=True, region=CENTER_BOTTOM)
         else:
             self.logging.log("跳过启动模拟器", self.target)

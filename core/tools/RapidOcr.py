@@ -19,7 +19,18 @@ class RapidOcr:
 
     def __init__(self, config_path: Optional[str] = None, **rapidocr_kwargs: Any) -> None:
         self._config_path = config_path
-        self._rapidocr_kwargs = rapidocr_kwargs
+        # The app supplies fixed 1920x1080 screenshots. Limiting the detector by
+        # its largest side prevents small regional crops from being upscaled,
+        # while bounded ONNX threads avoid CPU oversubscription.
+        defaults = {
+            "det_limit_type": "max",
+            "det_limit_side_len": 1920,
+            "intra_op_num_threads": 2,
+            "inter_op_num_threads": 1,
+            "use_cls": False,
+        }
+        defaults.update(rapidocr_kwargs)
+        self._rapidocr_kwargs = defaults
         self._engine: Optional[Any] = None
         self._lock = threading.Lock()
 

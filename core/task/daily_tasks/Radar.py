@@ -5,6 +5,7 @@ from watchfiles import awatch
 from core.NovaException import RadarFinishes
 from core.LoadTemplates import Template
 from core.task.TaskBase import *
+from core.tools.ScreenRegions import CENTER_RIGHT, ScreenTile
 
 TASK_NAME = "雷达"
 
@@ -100,13 +101,25 @@ class Radar(TaskBase):
                 await self.control.await_text_appear("搜索", click=True, time_out=1, sleep=1)
             else:
                 raise RadarFinishes("道具耗尽,雷达结束")
-        if await self.control.await_text_appear("仇恨值已满", exact=False, time_out=2):
-            await self.control.await_text_appear("攻击", click=True, sleep=1)
+        if await self.control.await_text_appear(
+            "仇恨值已满", exact=False, time_out=2, region=ScreenTile.CENTER
+        ):
+            await self.control.await_text_appear(
+                "攻击", click=True, sleep=1, region=CENTER_RIGHT
+            )
         self.logging.log("检查是否进入战斗 >>>", self.target, logging.DEBUG)
-        if await self.control.await_text_appear("战斗中", time_out=60, exact=False):
+        if await self.control.await_text_appear(
+            "战斗中", time_out=60, exact=False, region=ScreenTile.MIDDLE_RIGHT
+        ):
             self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
-            if await self.control.await_text_disappear("战斗中", time_out=10, sleep=3, exact=False):
+            if await self.control.await_text_disappear(
+                "战斗中",
+                time_out=10,
+                sleep=3,
+                exact=False,
+                region=ScreenTile.MIDDLE_RIGHT,
+            ):
                 self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
                 return
         if await self.control.await_text_appear("前往", click=True, time_out=2):

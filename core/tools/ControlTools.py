@@ -9,6 +9,7 @@ import numpy as np
 
 from core.LogManager import LogManager
 from core.tools.OcrTools import OcrTools
+from core.tools.ScreenRegions import crop_region
 from models.Template import Template
 
 
@@ -79,12 +80,19 @@ class ControlTools:
         exact=True,
         case_sensitive=False,
         debug=False,
-        image=None
+        image=None,
+        region=None,
     ):
         if image is None:
             image = self.device.get_screencap()
         try:
-            ocr_result = await self.ocr.async_ocr(provider=provider, image=image, include_location=True)
+            ocr_image = image
+            origin_x = 0
+            origin_y = 0
+            if region is not None:
+                ocr_image, (origin_x, origin_y) = crop_region(image, region)
+
+            ocr_result = await self.ocr.async_ocr(provider=provider, image=ocr_image, include_location=True)
             if not ocr_result.get('success'):
                 self.logging.log(f"{text} 文字识别失败: {ocr_result.get('error')}", self.target, logging.ERROR)
                 return None
@@ -107,7 +115,10 @@ class ControlTools:
 
                 candidate = str(item.get('text') or '')
                 box = item.get('box')
-                center = OcrTools._center_from_box(box)
+                local_center = OcrTools._center_from_box(box)
+                center = None
+                if local_center is not None:
+                    center = (local_center[0] + origin_x, local_center[1] + origin_y)
                 in_forbidden = center is not None and self.__is_within_no_click_zone(center[0], center[1])
                 debug_items.append(f"{candidate}@{center}, forbidden={in_forbidden}")
 
@@ -246,6 +257,7 @@ class ControlTools:
         exact=True,
         case_sensitive=False,
         debug=False,
+        region=None,
     ):
         start_time = time.time()
         while time.time() - start_time < time_out:
@@ -259,9 +271,27 @@ class ControlTools:
                 exact=exact,
                 case_sensitive=case_sensitive,
                 debug=debug,
+                region=region,
             )
             if coordinate:
                 return True
+
+        # Preserve behavior if a future UI revision moves the target outside its
+        # normal region, while keeping the polling loop inexpensive.
+        if region is not None:
+            return bool(
+                await self.matching_text(
+                    text=text,
+                    provider=provider,
+                    click=click,
+                    sleep=0,
+                    offset_x=offset_x,
+                    offset_y=offset_y,
+                    exact=exact,
+                    case_sensitive=case_sensitive,
+                    debug=debug,
+                )
+            )
         return False
 
     async def await_text_disappear(
@@ -273,6 +303,7 @@ class ControlTools:
         exact=True,
         case_sensitive=False,
         debug=False,
+        region=None,
     ):
         start_time = time.time()
         while time.time() - start_time < time_out:
@@ -284,8 +315,23 @@ class ControlTools:
                 exact=exact,
                 case_sensitive=case_sensitive,
                 debug=debug,
+                region=region,
             ):
-                return True
+                if region is None:
+                    return True
+
+                # A miss in a crop may be caused by a UI revision. Confirm once
+                # against the full screen before declaring the text gone.
+                if not await self.matching_text(
+                    text=text,
+                    provider=provider,
+                    click=False,
+                    sleep=0,
+                    exact=exact,
+                    case_sensitive=case_sensitive,
+                    debug=debug,
+                ):
+                    return True
         return False
 
     @staticmethod

@@ -6,6 +6,7 @@ from core.tools.ControlTools import ControlTools
 from core.LoadTemplates import Templates
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
+from core.tools.ScreenRegions import CENTER_BOTTOM, CENTER_RIGHT, LOWER_RIGHT, ScreenTile
 from device_operation.DeviceUtils import DeviceUtils
 from models.Module import Module
 from models.Config import Config
@@ -89,7 +90,9 @@ class TaskBase:
         self.logging.log(f"检测到游戏关闭，等待{game_start_time}秒...", self.target, logging.INFO)
         await asyncio.sleep(game_start_time)
 
-        if not await self.control.await_text_appear("星系", click=True, time_out=30, sleep=1):
+        if not await self.control.await_text_appear(
+            "星系", click=True, time_out=30, sleep=1, region=ScreenTile.BOTTOM_RIGHT
+        ):
             raise TaskFinishes("检测到游戏关闭, 但未找到星系")
 
         self.logging.log("重新启动游戏成功！", self.target, logging.INFO)
@@ -101,7 +104,9 @@ class TaskBase:
         # if not await self.control.matching_one(Templates.SIGN_BACK_IN):
         #    return False
 
-        if not await self.control.matching_text("请重新登录", click=False, exact=False, image=image):
+        if not await self.control.matching_text(
+            "请重新登录", click=False, exact=False, image=image, region=CENTER_BOTTOM
+        ):
             return False
 
         self.module = Module.get(Module.name == self.target)
@@ -115,7 +120,9 @@ class TaskBase:
         self.logging.log(f"检测到已登出，等待 {relogin_time} 秒后重新登录...", self.target, logging.INFO)
         await asyncio.sleep(relogin_time)
 
-        if not await self.control.await_text_appear("确定", click=True, time_out=30, sleep=1):
+        if not await self.control.await_text_appear(
+            "确定", click=True, time_out=30, sleep=1, region=CENTER_BOTTOM
+        ):
             raise TaskFinishes("检测到已登出, 但未找到重新登录确认按钮")
 
         # await asyncio.sleep(30)
@@ -152,11 +159,15 @@ class TaskBase:
 
     async def attack(self, sleet_all=False):
         self.revenge = False
-        await self.control.await_text_appear("攻击", click=True, time_out=3)
-        if await self.control.await_text_appear("仇恨值已满", exact=False, time_out=2):
+        await self.control.await_text_appear("攻击", click=True, time_out=3, region=CENTER_RIGHT)
+        if await self.control.await_text_appear(
+            "仇恨值已满", exact=False, time_out=2, region=ScreenTile.CENTER
+        ):
             self.revenge = True
-            await self.control.await_text_appear("攻击", click=True, sleep=1)
-        await self.control.matching_text("快速维修", click=True, sleep=1)
+            await self.control.await_text_appear("攻击", click=True, sleep=1, region=CENTER_RIGHT)
+        await self.control.matching_text(
+            "快速维修", click=True, sleep=1, region=ScreenTile.TOP_RIGHT
+        )
         fleets = json.loads(self.module.attack_fleet)
         if "all" in fleets or sleet_all:
             await self.control.await_text_appear("选择全部", click=True, time_out=3, sleep=0.5)
@@ -164,7 +175,9 @@ class TaskBase:
             for fleet in fleets:
                 await self.device.click(fleet_map[fleet])
 
-        if await self.control.await_text_appear("确定", click=True, time_out=0.5):
+        if await self.control.await_text_appear(
+            "确定", click=True, time_out=0.5, region=LOWER_RIGHT
+        ):
             await self.combat_checks()
             if self.revenge:
                 await self.recall_fleets()
@@ -174,10 +187,18 @@ class TaskBase:
 
     async def combat_checks(self):
         self.logging.log("检查是否进入战斗 >>>", self.target, logging.DEBUG)
-        if await self.control.await_text_appear("战斗中", time_out=180, exact=False):
+        if await self.control.await_text_appear(
+            "战斗中", time_out=180, exact=False, region=ScreenTile.MIDDLE_RIGHT
+        ):
             self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
-            if await self.control.await_text_disappear("战斗中", time_out=120, sleep=3, exact=False):
+            if await self.control.await_text_disappear(
+                "战斗中",
+                time_out=120,
+                sleep=3,
+                exact=False,
+                region=ScreenTile.MIDDLE_RIGHT,
+            ):
                 self.logging.log("战斗结束<<<", self.target, logging.DEBUG)
 
     async def recall_fleets(self):

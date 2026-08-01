@@ -1,6 +1,7 @@
 from core.task.TaskBase import *
 from core.task.daily_tasks.Order import Order
 from core.LoadTemplates import Template
+from core.tools.ScreenRegions import CENTER_BOTTOM, RIGHT_MIDDLE_BOTTOM, ScreenTile
 
 
 TASK_NAME = "常驻任务"
@@ -214,8 +215,12 @@ class Permanent(TaskBase):
             await self.return_home()
             return
 
-        await self.control.await_text_appear("行星改造", click=True, time_out=5, exact=False)
-        await self.control.await_text_appear("全部领取", click=True, time_out=5, exact=False)
+        await self.control.await_text_appear(
+            "行星改造", click=True, time_out=5, exact=False, region=RIGHT_MIDDLE_BOTTOM
+        )
+        await self.control.await_text_appear(
+            "全部领取", click=True, time_out=5, exact=False, region=ScreenTile.TOP_RIGHT
+        )
         if await self.control.await_text_appear("获得物品", click=False, time_out=5, exact=False):
             self.logging.log("采集星球资源 | 获得物品 完成， 开始关闭", self.target, logging.INFO)
             image = self.device.get_screencap()
@@ -240,17 +245,27 @@ class Permanent(TaskBase):
         return True
 
     async def close_game_check(self):
-        if not await self.control.await_text_appear("确定退出吗", click=True, time_out=5, exact=False):
+        if not await self.control.await_text_appear(
+            "确定退出吗", click=True, time_out=5, exact=False, region=CENTER_BOTTOM
+        ):
             return False
         
-        await self.control.await_text_appear("取消", click=True, time_out=3, exact=False)
+        await self.control.await_text_appear(
+            "取消", click=True, time_out=3, exact=False, region=CENTER_BOTTOM
+        )
 
         return True
 
     async def reset_process(self):
         await self.return_home()
-        await self.control.await_text_appear("空间站", click=True, time_out=5, exact=True)
-        await self.control.await_text_appear("星系", click=True, time_out=10, exact=True)
-        if await self.control.await_text_appear("空间站", click=False, time_out=10, exact=True):
+        await self.control.await_text_appear(
+            "空间站", click=True, time_out=5, exact=True, region=ScreenTile.BOTTOM_RIGHT
+        )
+        await self.control.await_text_appear(
+            "星系", click=True, time_out=10, exact=True, region=ScreenTile.BOTTOM_RIGHT
+        )
+        if await self.control.await_text_appear(
+            "空间站", click=False, time_out=10, exact=True, region=ScreenTile.BOTTOM_RIGHT
+        ):
             await self.device.zoom_out()
             await asyncio.sleep(5)
