@@ -5,7 +5,7 @@ from watchfiles import awatch
 from core.NovaException import RadarFinishes
 from core.LoadTemplates import Template
 from core.task.TaskBase import *
-from core.tools.ScreenRegions import CENTER_RIGHT, ScreenTile
+from core.tools.ScreenRegions import BOTTOM_CENTER_RIGHT, CENTER_RIGHT, ScreenTile
 
 TASK_NAME = "雷达"
 
@@ -88,24 +88,24 @@ class Radar(TaskBase):
     async def radar_process(self):
         await self.control.await_element_appear(RADAR, click=True, time_out=3)
         await self.control.await_text_appear("搜索", click=True, time_out=3)
-        if await self.control.await_text_appear("使用", click=True, time_out=1) or await self.control.await_text_appear("购买", click=True, time_out=1):
+        if await self.control.await_text_appear("使用", click=True, time_out=3) or await self.control.await_text_appear("购买", click=True, time_out=3):
             if self.hidden_policy == "不使用能量道具":
                 raise RadarFinishes("不使用道具,雷达结束")
             if self.hidden_policy in ["使用能量道具", "使用GEC购买能量"]:
-                await self.control.await_element_appear(MAX, click=True, time_out=1.5, sleep=0.5)
-                if not await self.control.await_element_appear(RADAR_ENERGY, click=True, time_out=1, sleep=0.5):
+                await self.control.await_element_appear(MAX, click=True, time_out=3, sleep=0.5)
+                if not await self.control.await_element_appear(RADAR_ENERGY, click=True, time_out=3, sleep=0.5):
                     if self.hidden_policy == "使用GEC购买能量":
-                        await self.control.await_element_appear(GEC, click=True, time_out=1, sleep=1)
+                        await self.control.await_element_appear(GEC, click=True, time_out=3, sleep=1)
                     else:
                         raise RadarFinishes("不使用GEC购买道具,雷达结束")
-                await self.control.await_text_appear("搜索", click=True, time_out=1, sleep=1)
+                await self.control.await_text_appear("搜索", click=True, time_out=3, sleep=1)
             else:
                 raise RadarFinishes("道具耗尽,雷达结束")
         if await self.control.await_text_appear(
             "仇恨值已满", exact=False, time_out=2, region=ScreenTile.CENTER
         ):
             await self.control.await_text_appear(
-                "攻击", click=True, sleep=1, region=CENTER_RIGHT
+                "攻击", click=True, sleep=1, region=BOTTOM_CENTER_RIGHT
             )
         self.logging.log("检查是否进入战斗 >>>", self.target, logging.DEBUG)
         if await self.control.await_text_appear(

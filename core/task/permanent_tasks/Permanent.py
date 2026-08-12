@@ -268,4 +268,4 @@ class Permanent(TaskBase):
             "空间站", click=False, time_out=10, exact=True, region=ScreenTile.BOTTOM_RIGHT
         ):
             await self.device.zoom_out()
-            await asyncio.sleep(5)
+            await asyncio.sleep(10)

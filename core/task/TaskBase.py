@@ -6,7 +6,7 @@ from core.tools.ControlTools import ControlTools
 from core.LoadTemplates import Templates
 from core.LogManager import LogManager
 from core.NovaException import TaskFinishes
-from core.tools.ScreenRegions import CENTER_BOTTOM, CENTER_RIGHT, LOWER_RIGHT, ScreenTile
+from core.tools.ScreenRegions import BOTTOM_CENTER_RIGHT, CENTER_BOTTOM, CENTER_RIGHT, LOWER_RIGHT, ScreenTile
 from device_operation.DeviceUtils import DeviceUtils
 from models.Module import Module
 from models.Config import Config
@@ -164,7 +164,9 @@ class TaskBase:
             "仇恨值已满", exact=False, time_out=2, region=ScreenTile.CENTER
         ):
             self.revenge = True
-            await self.control.await_text_appear("攻击", click=True, sleep=1, region=CENTER_RIGHT)
+            await self.control.await_text_appear(
+                "攻击", click=True, sleep=1, region=BOTTOM_CENTER_RIGHT
+            )
         await self.control.matching_text(
             "快速维修", click=True, sleep=1, region=ScreenTile.TOP_RIGHT
         )

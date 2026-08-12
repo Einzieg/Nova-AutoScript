@@ -30,6 +30,7 @@ ScreenRegion = Union[ScreenTile, Sequence[ScreenTile]]
 Bounds = Tuple[int, int, int, int]
 
 CENTER_RIGHT = (ScreenTile.CENTER, ScreenTile.MIDDLE_RIGHT)
+BOTTOM_CENTER_RIGHT = (ScreenTile.BOTTOM_CENTER, ScreenTile.BOTTOM_RIGHT)
 RIGHT_MIDDLE_BOTTOM = (ScreenTile.MIDDLE_RIGHT, ScreenTile.BOTTOM_RIGHT)
 CENTER_BOTTOM = (ScreenTile.CENTER, ScreenTile.BOTTOM_CENTER)
 LOWER_RIGHT = (
