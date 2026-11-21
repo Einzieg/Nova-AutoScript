@@ -64,7 +64,7 @@ class Radar(TaskBase):
 
     async def cleanup(self):
         await super().cleanup()
-        await self.return_home()
+        await self.return_home(optimize=True)
         self.logging.log(f"任务 {TASK_NAME} 执行完成 <<<", self.target)
 
     async def start(self):
@@ -87,6 +87,7 @@ class Radar(TaskBase):
     async def radar_process(self):
         await self.control.await_element_appear(RADAR, click=True, time_out=3)
         await self.control.await_text_appear("搜索", click=True, time_out=3)
+        await self.control.await_text_appear("确定", click=True, time_out=1)
         if await self.control.await_text_appear("使用", click=True, time_out=1) or await self.control.await_text_appear("购买", click=True, time_out=1):
             if self.hidden_policy == "不使用能量道具":
                 raise RadarFinishes("不使用道具,雷达结束")
@@ -103,7 +104,7 @@ class Radar(TaskBase):
         if await self.control.await_text_appear("仇恨值已满", exact=False, time_out=2):
             await self.control.await_text_appear("攻击", click=True, sleep=1)
         self.logging.log("检查是否进入战斗 >>>", self.target, logging.DEBUG)
-        if await self.control.await_text_appear("战斗中", time_out=60, exact=False):
+        if await self.control.await_text_appear("战斗中", time_out=10, exact=False):
             self.logging.log("进入战斗<<<", self.target, logging.DEBUG)
             self.logging.log("检查战斗是否结束>>>", self.target, logging.DEBUG)
             if await self.control.await_text_disappear("战斗中", time_out=10, sleep=3, exact=False):
