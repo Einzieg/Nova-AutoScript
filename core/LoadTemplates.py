@@ -258,6 +258,16 @@ class Templates:
         threshold=0.65,
         template_path=ROOT_DIR / "static/novaimgs/button/quick_repair.png"
     )
+    TO_CONTROL_PANEL_GOLD = Template(
+        name="金控制面板",
+        threshold=0.75,
+        template_path=ROOT_DIR / "static/novaimgs/button/button_system_gold.png"
+    )
+    TO_CONTROL_PANEL_BLUE = Template(
+        name="蓝控制面板",
+        threshold=0.75,
+        template_path=ROOT_DIR / "static/novaimgs/button/button_system_blue.png"
+    )
     PLANET_TRANSFORM = Template(
         name="星球资源",
         threshold=0.75,

@@ -74,6 +74,9 @@ else:
 
 
 class DeviceUtils:
+    APP_PACKAGES = ('com.stone3.ig', 'com.gamebeartech.sa')
+    APP_ACTIVITY = 'com.google.firebase.MessagingUnityPlayerActivity'
+
     CAP_TOOLS = {
         'ADB': ADBCap,
         'MiniCap': MiniCap,
@@ -312,34 +315,44 @@ class DeviceUtils:
         """检查应用是否正在运行"""
         try:
             output = await self.adb.shell("ps")
-            if "com.stone3.ig" in output:
+            package = next((package for package in self.APP_PACKAGES if package in output), None)
+            if package:
                 self.logging.log("应用正在运行", self.name, logging.INFO)
                 output = await self.adb.shell("dumpsys window | grep mFocusedWindow")
-                if "com.stone3.ig" in output:
+                if package in output:
                     self.logging.log("应用在前台运行", self.name, logging.INFO)
                     return True
                 else:
                     self.logging.log("应用未在前台运行,尝试重新打开应用", self.name, logging.INFO)
-                    await self.close_app()
+                    await self.close_app(package)
                     await asyncio.sleep(3)
-                    await self.launch_app()
+                    await self.launch_app(package)
             else:
                 await self.launch_app()
         except Exception as e:
             self.logging.log(f"检查应用运行状态时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    async def launch_app(self):
+    async def _get_installed_app_package(self):
+        output = await self.adb.shell("pm list packages")
+        package = next((package for package in self.APP_PACKAGES if f"package:{package}" in output), None)
+        if not package:
+            raise RuntimeError("未找到支持的应用包")
+        return package
+
+    async def launch_app(self, package=None):
         try:
-            await self.adb.shell("am start -n com.stone3.ig/com.google.firebase.MessagingUnityPlayerActivity")
+            package = package or await self._get_installed_app_package()
+            await self.adb.shell(f"am start -n {package}/{self.APP_ACTIVITY}")
             self.logging.log("已启动应用", self.name, logging.INFO)
         except Exception as e:
             self.logging.log(f"启动应用时出错: {str(e)}", self.name, logging.ERROR)
             raise
 
-    async def close_app(self):
+    async def close_app(self, package=None):
         try:
-            await self.adb.shell("am force-stop com.stone3.ig")
+            package = package or await self._get_installed_app_package()
+            await self.adb.shell(f"am force-stop {package}")
             self.logging.log("已关闭应用", self.name, logging.DEBUG)
         except Exception as e:
             self.logging.log(f"关闭应用时出错: {str(e)}", self.name, logging.ERROR)
